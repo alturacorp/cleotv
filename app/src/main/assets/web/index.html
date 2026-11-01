@@ -3003,7 +3003,7 @@ var ROW = {
   perf: { label: 'Performance', type: 'cycle', key: 'perf', values: ['auto', 'lighter', 'full'], fmt: function (v) { return v === 'auto' ? 'Auto' + (LITE ? ' (lighter)' : '') : v === 'lighter' ? 'Lighter' : 'Full effects'; },
     help: 'Lighter mode uses fewer stars and simpler animations on older Fire TV sticks. Auto picks it on sticks with under about 1.5 GB of memory.' },
 
-  pChats: { label: 'What you say to ' + BRAND, type: 'info', fmt: function () { return BRAND + ' servers'; } },
+  pChats: { label: 'What you say to ' + BRAND, type: 'info', fmt: function () { return BRAND + ' servers, from this TV’s device ID (with its IP address and rough location, like cleo.ac)'; } },
   pApps: { label: 'Streaming app names', type: 'info', fmt: function () { return settings.picksOn ? BRAND + ' servers, for picks' : 'Not sent (picks off)'; } },
   pTown: { label: 'Weather town', type: 'info', fmt: function () { return settings.location ? 'Open-Meteo' : 'Not set'; } },
   pNote: { label: 'Daily note', type: 'info', fmt: function () { return settings.dailyNote ? BRAND + ' servers, date and weather only' : 'Off'; } },
@@ -3584,10 +3584,51 @@ function tvSystemPrompt() {
     'The TV is a shared screen and others may be in the room. Do not bring up anything personal or sensitive unless they raise it. If they raise something serious, respond with care and suggest continuing privately on their phone. If they might be in danger, gently encourage contacting local emergency services or a crisis line right away.'
   ].filter(Boolean).join('\n');
 }
-function workerHeaders() { return Cid.headers(); }
-function askWorker(messages, extra) {
-  var body = Object.assign({ messages: messages, uid: uid, client: 'tv' }, extra || {});
-  return http('POST', settings.worker + '/lume', JSON.stringify(body), workerHeaders()).then(function (r) {
+/* The Worker only answers chat from a registered device, like cleo.ac: a random token, registered once with
+   /auth/register, then sent as X-Device-Token. No fingerprint is sent from the TV. */
+var LumeDev = (function () {
+  var reg = null;
+  function token() {
+    var t = Store.get('lumeTok', '');
+    if (!t || t.length < 16) {
+      var b = crypto.getRandomValues(new Uint8Array(24));
+      t = Array.prototype.map.call(b, function (x) { return ('0' + x.toString(16)).slice(-2); }).join('');
+      Store.set('lumeTok', t); Store.set('lumeReg', '');
+    }
+    return t;
+  }
+  function ensure(force) {
+    if (!force && Store.get('lumeReg', '') === settings.worker) return Promise.resolve(token());
+    if (reg) return reg;
+    reg = http('POST', settings.worker + '/auth/register', JSON.stringify({ deviceToken: token() }), { 'Content-Type': 'application/json' }).then(function (r) {
+      reg = null;
+      if (r.status !== 200) throw new Error('HTTP ' + r.status + ' registering this TV');
+      Store.set('lumeReg', settings.worker); return token();
+    }, function (e) { reg = null; throw e; });
+    return reg;
+  }
+  return { token: token, ensure: ensure };
+})();
+function workerHeaders() { var h = Cid.headers(); h['X-Device-Token'] = LumeDev.token(); return h; }
+/* The Worker requires a system message first but doesn't pass it to the model (Cleo Core is server-owned).
+   So the TV's instructions travel as labelled context at the start of the latest user message instead. */
+function workerMessages(messages, extra) {
+  var sys = messages[0] && messages[0].role === 'system' ? String(messages[0].content || '') : '';
+  var rest = (sys ? messages.slice(1) : messages.slice()).filter(function (m) { return m && m.role !== 'system' && m.content; });
+  if (sys && !(extra && extra.task)) {
+    for (var i = rest.length - 1; i >= 0; i--) {
+      if (rest[i].role !== 'user') continue;
+      rest[i] = { role: 'user', content: '[Context from ' + BRAND + ' TV, for this reply]\n' + sys + '\n[End of context]\n\n' + rest[i].content };
+      break;
+    }
+  }
+  return [{ role: 'system', content: BRAND + ' TV' }].concat(rest);
+}
+function askWorker(messages, extra, retried) {
+  var body = Object.assign({ messages: workerMessages(messages, extra), uid: uid, client: 'tv' }, extra || {});
+  return LumeDev.ensure(false).then(function () { return http('POST', settings.worker + '/lume', JSON.stringify(body), workerHeaders()); }).then(function (r) {
+    // Unknown token (KV was cleared, or the Worker address changed): register again once.
+    if (r.status === 401 && !retried) return LumeDev.ensure(true).then(function () { return askWorker(messages, extra, true); });
     if (r.status === 403) {
       var j = parseJsonLoose(r.text);
       if (j && j.error === 'lume_disabled') { var e = new Error('disabled'); e.disabled = true; throw e; }
