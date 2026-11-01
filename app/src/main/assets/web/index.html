@@ -111,6 +111,63 @@ body[data-view="apps"] #backdrop { opacity: 0; }
 .tbtns .btn.primary { background: var(--ink); color: #14120f; }
 .tcredit { margin-top: 1.4rem; font-size: 1.15rem; color: var(--ink-3); max-width: 56rem; }
 body.kids .tab[data-view="search"] { display: none; }
+/* ---------- Watch ---------- */
+body[data-view="watch"] #watch { opacity: 1; pointer-events: auto; }
+body.kids .tab[data-view="watch"] { display: none; }
+#watchStage { padding: 12rem 5.6rem 8rem; transition: transform .45s var(--ease); }
+#watchHead { display: flex; align-items: center; }
+#watchHead .sbar { width: 60rem; height: 5.6rem; }
+.wnote { margin-left: 2.4rem; font-size: 1.4rem; color: var(--ink-3); }
+.wrow { margin-top: 3.4rem; }
+.wrow h3 { margin: 0 0 1.4rem; font-size: 1.3rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.wtrack { display: flex; transition: transform .4s var(--ease); }
+.vcard { flex: none; width: 30rem; margin-right: 2.2rem; transition: transform .3s var(--ease); }
+.vthumb { position: relative; height: 16.9rem; border-radius: 1.4rem; overflow: hidden; box-shadow: 0 1rem 2.4rem rgba(0,0,0,.35); transition: box-shadow .3s var(--ease); }
+.vthumb img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; }
+.vdur { position: absolute; right: .9rem; bottom: .9rem; padding: .2rem .7rem; border-radius: .6rem; background: rgba(0,0,0,.78); font-size: 1.2rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.vdur.live { background: #c4302b; letter-spacing: .08em; }
+.vprog { position: absolute; left: 0; bottom: 0; height: .45rem; background: var(--ink); }
+.vtitle { margin-top: 1.1rem; font: 500 1.6rem/1.3 "Lora", Georgia, serif; max-height: 4.2rem; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.vsub { margin-top: .3rem; font-size: 1.3rem; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vcard.focused { transform: scale(1.06); } .vcard.focused .vthumb { box-shadow: 0 0 0 .3rem var(--ink), 0 1.8rem 3.6rem rgba(0,0,0,.55); }
+.wempty { font-size: 1.6rem; color: var(--ink-3); padding: .6rem 0; max-width: 76rem; line-height: 1.55; }
+.wchan { display: flex; align-items: center; } .wchan img { width: 6.4rem; height: 6.4rem; border-radius: 50%; margin-right: 1.8rem; object-fit: cover; background: #2a2622; }
+.wchan b { font: 500 2.2rem "Lora", Georgia, serif; margin-right: 2.4rem; }
+
+/* ---------- YouTube player: Cleo draws around the video, never on top of it ---------- */
+#ytPane { z-index: 40; overflow: hidden; }
+#ytPane[data-state="full"] { background: #000; }
+#ytArt, #ytCard { display: none; }
+#ytPane[data-state="card"] #ytArt, #ytPane[data-state="error"] #ytArt { display: block; }
+#ytPane[data-state="card"] #ytCard, #ytPane[data-state="error"] #ytCard { display: flex; }
+#ytBox { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: #000; visibility: hidden; overflow: hidden;
+  transition: left .45s var(--ease), top .45s var(--ease), width .45s var(--ease), height .45s var(--ease), border-radius .45s var(--ease); }
+#ytPane[data-state="full"] #ytBox, #ytPane[data-state="back"] #ytBox, #ytPane[data-state="next"] #ytBox { visibility: visible; }
+#ytPane[data-state="back"] #ytBox { left: 12.8rem; top: 2rem; width: 102.4rem; height: 57.6rem; border-radius: 1.2rem; }
+#ytPane[data-state="next"] #ytBox { left: 5.6rem; top: 20.2rem; width: 56rem; height: 31.5rem; border-radius: 1.2rem; }
+#ytFrame, #ytFrame iframe { width: 100%; height: 100%; border: 0; display: block; }
+#ytFrame iframe { pointer-events: none; } /* keeps the remote's focus in Cleo, not inside YouTube's frame */
+#ytPanel { position: absolute; left: 12.8rem; right: 12.8rem; top: 61.2rem; opacity: 0; pointer-events: none; transition: opacity .3s var(--ease); }
+#ytPane[data-state="back"] #ytPanel { opacity: 1; pointer-events: auto; }
+.ytl1 { display: flex; justify-content: space-between; align-items: baseline; }
+#ytNow { font: 500 1.7rem "Lora", Georgia, serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 2rem; }
+#ytNow small { font: 400 1.3rem "Figtree", system-ui, sans-serif; color: var(--ink-3); margin-left: 1rem; }
+#ytTime { font-size: 1.3rem; color: var(--ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+#ytBar { position: relative; height: .5rem; border-radius: .4rem; background: rgba(255,255,255,.14); margin: 1rem 0 1.2rem; transition: height .2s, box-shadow .2s; }
+#ytBar i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: .4rem; background: var(--ink); }
+#ytBar.focused { height: .9rem; box-shadow: 0 0 0 .25rem rgba(236,232,225,.35); }
+#ytCtrls { display: flex; align-items: center; }
+#ytCtrls .btn { padding: .8rem 1.6rem; font-size: 1.35rem; margin-right: 1rem; }
+#ytCtrls .btn svg { width: 1.5rem; height: 1.5rem; }
+#ytCtrls .gap { flex: 1; }
+#ytNext { position: absolute; left: 66rem; top: 14rem; width: 56rem; display: none; }
+#ytPane[data-state="next"] #ytNext { display: block; animation: heroIn .5s var(--ease); }
+#ytNext h2 { margin: 1rem 0 2rem; font: 500 3rem/1.15 "Lora", Georgia, serif; }
+.nitem { display: flex; align-items: center; padding: .9rem; border-radius: 1.4rem; margin-bottom: .6rem; transition: background .2s, transform .2s var(--ease); }
+.nitem .nth { width: 14.2rem; height: 8rem; border-radius: .9rem; flex: none; background-size: cover; background-position: center; margin-right: 1.6rem; background-color: #22201c; }
+.nitem .ntx { min-width: 0; } .nitem b { display: block; font-size: 1.55rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nitem small { font-size: 1.25rem; color: var(--ink-3); }
+.nitem.focused { background: var(--ink); color: #12110f; transform: scale(1.02); } .nitem.focused small { color: #5d5851; }
 
 /* Home: hero */
 #hero { position: absolute; left: 5.6rem; top: 11.2rem; width: 70rem; }
@@ -549,6 +606,7 @@ body.reduce *, body.reduce *::before, body.reduce *::after { animation: none !im
   <nav class="nav" aria-label="Sections">
     <div class="tab on" data-focus data-kind="nav" data-view="home">Home</div>
     <div class="tab" data-focus data-kind="nav" data-view="apps">Apps</div>
+    <div class="tab" data-focus data-kind="nav" data-view="watch">Watch</div>
     <div class="tab" data-focus data-kind="nav" data-view="search">Search</div>
     <div class="tab brandName" data-focus data-kind="nav" data-view="cleo">Cleo</div>
   </nav>
@@ -604,6 +662,16 @@ body.reduce *, body.reduce *::before, body.reduce *::after { animation: none !im
   <div id="appsStage">
     <div id="appsHead"><h1>Apps</h1><p id="appsSub">Hold OK or press ☰ on an app for options</p></div>
     <div id="grid"></div>
+  </div>
+</main>
+
+<main class="view" id="watch">
+  <div id="watchStage">
+    <div id="watchHead">
+      <div class="sbar" id="wbar" data-focus data-kind="winput"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input type="text" id="wInput" placeholder="Search YouTube, or @channel to follow" enterkeyhint="search" autocomplete="off"></div>
+      <div class="wnote" id="wNote">Hold OK or press ☰ on a video for options</div>
+    </div>
+    <div id="wRows"></div>
   </div>
 </main>
 
@@ -806,6 +874,13 @@ body.reduce *, body.reduce *::before, body.reduce *::after { animation: none !im
   </div>
 </section>
 
+<section class="pane" id="ytPane" role="dialog" aria-label="YouTube" data-state="card">
+  <div class="tart" id="ytArt"></div>
+  <div class="tinfo" id="ytCard"><div class="kicker">YouTube</div><h1 id="ytTitle"></h1><div class="tmeta" id="ytMeta"></div><p class="tdesc" id="ytDesc"></p><div class="twhere" id="ytNote"></div><div class="tbtns" id="ytBtns"></div></div>
+  <div id="ytBox"><div id="ytFrame"></div></div>
+  <div id="ytPanel"><div class="ytl1"><div id="ytNow"></div><span id="ytTime"></span></div><div id="ytBar" data-focus data-kind="ybar"><i></i></div><div id="ytCtrls"></div></div>
+  <div id="ytNext"><div class="kicker">Up next</div><h2 id="ytNextTitle"></h2><div id="ytNextList"></div></div>
+</section>
 <section class="pane" id="whoPane" role="dialog" aria-label="Who’s watching">
   <div class="center">
     <h1>Who’s watching?</h1>
@@ -925,7 +1000,7 @@ function pad(n) { return (n < 10 ? '0' : '') + n; }
 function cssEsc(s) { return String(s).replace(/["\\]/g, '\\$&'); }
 function remPx() { return Math.min(innerWidth / 128, innerHeight / 72); }
 var toastTimer;
-function toast(msg) { var t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove('on'); }, 2800); }
+function toast(msg) { if (typeof Yt !== 'undefined') Yt.reveal(); var t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove('on'); }, 2800); }
 function iconUrl(kind, pkg) { return Native ? '/icon/' + kind + '/' + encodeURIComponent(pkg) : ''; }
 function applyBrand() {
   var els = document.querySelectorAll('.brandName');
@@ -1582,13 +1657,370 @@ var Shared = (function () {
 })();
 function offerLink(m) {
   var host = ''; try { host = new URL(m.url).hostname.replace(/^www\./, ''); } catch (e) { return; }
-  var yt = /(^|\.)youtube\.com$|^youtu\.be$/.test(host);
+  var yt = /(^|\.)youtube\.com$|^youtu\.be$/.test(host), vid = yt ? ytId(m.url) : '';
   if (Amb.isOn()) exitAmbient();
+  if (vid && !isKids()) {
+    openMenu('Play this video?', 'From ' + (m.from || 'your phone') + ' · YouTube', [
+      { label: 'Play in ' + BRAND, fn: function () { Yt.open({ id: vid }, null, 0, true); } },
+      { label: 'Open in the YouTube app', fn: function () { Yt.openApp(vid); } },
+      { label: 'Not now', fn: function () {} }
+    ]);
+    return;
+  }
   // Links are never opened by themselves: someone at the TV says yes first.
   openMenu(yt ? 'Play this video?' : 'Open this link?', 'From ' + (m.from || 'your phone') + ' · ' + host, [
     { label: yt ? 'Play on YouTube' : 'Open', fn: function () { if (!Native || !Native.openUrl || !Native.openUrl(m.url)) toast(Native ? 'No app on this TV can open that link' : 'Would open ' + m.url); } },
     { label: 'Not now', fn: function () {} }
   ]);
+}
+
+/* ======================= Watch: YouTube in Cleo =======================
+   Search and rows come through Cleo's Worker (the YouTube key stays there). Videos play in YouTube's official
+   embedded player with its own controls hidden; Cleo's title card, panel and Up next are drawn around the video,
+   never on top of it, as YouTube's rules require. What you watch and follow stays on this TV, per profile. */
+var YtApi = {
+  call: function (path, body) {
+    return LumeDev.ensure(false).then(function () { return http('POST', settings.worker + '/yt/' + path, JSON.stringify(body || {}), workerHeaders()); }).then(function (r) {
+      var j = parseJsonLoose(r.text) || {};
+      if (r.status === 401) Store.set('lumeReg', '');
+      if (r.status >= 400) { var e = new Error(j.error || 'HTTP ' + r.status); e.code = j.error || ''; e.status = r.status; throw e; }
+      return j;
+    });
+  },
+  why: function (e) {
+    var c = e && e.code;
+    if (c === 'youtube_quota') return 'YouTube’s daily allowance is used up. It resets overnight; videos already listed still play.';
+    if (c === 'youtube_search_limit') return 'That’s enough YouTube searches for today. Rows and links still work.';
+    if (c === 'youtube_not_set_up') return 'YouTube isn’t set up on ' + BRAND + '’s server yet.';
+    if (c === 'youtube_key_invalid') return 'The YouTube key on ' + BRAND + '’s server isn’t working.';
+    return 'Couldn’t reach YouTube just now.';
+  }
+};
+function ytId(url) {
+  var m = /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|live\/|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/.exec(String(url || ''));
+  return m ? m[1] : '';
+}
+function fmtClock(s) { s = Math.max(0, Math.floor(s || 0)); var h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60; return (h ? h + ':' + pad(m) : m) + ':' + pad(x); }
+function fmtLen(s) { var m = Math.round((s || 0) / 60); return m < 1 ? 'Under a minute' : m < 60 ? m + ' min' : Math.floor(m / 60) + ' h' + (m % 60 ? ' ' + (m % 60) + ' min' : ''); }
+function fmtAgo(d) {
+  var t = Date.parse(d); if (!t) return ''; var days = Math.floor((Date.now() - t) / 86400000);
+  return days < 1 ? 'Today' : days < 2 ? 'Yesterday' : days < 7 ? days + ' days ago' : days < 30 ? Math.floor(days / 7) + (days < 14 ? ' week ago' : ' weeks ago') : days < 365 ? Math.floor(days / 30) + (days < 60 ? ' month ago' : ' months ago') : Math.floor(days / 365) + (days < 730 ? ' year ago' : ' years ago');
+}
+
+var Watch = (function () {
+  var ready = null, lists = { res: null, cont: [], fol: null, pop: null }, query = '', chan = null, loadedAt = 0, loading = false, jump = false, seq = 0;
+  function follows() { return PS.get('ytFollows', []); }
+  function isFollowing(id) { return follows().some(function (f) { return f.id === id; }); }
+  function follow(c) {
+    if (!c || !c.id || isGuest()) return;
+    if (isFollowing(c.id)) { PS.set('ytFollows', follows().filter(function (f) { return f.id !== c.id; })); toast('Unfollowed ' + c.name); }
+    else { PS.set('ytFollows', [{ id: c.id, name: c.name, thumb: c.thumb || '' }].concat(follows()).slice(0, 30)); toast('Following ' + c.name + '. New videos appear in Watch'); }
+    lists.fol = null; loadedAt = 0; if (view === 'watch') load(true);
+  }
+  function resumes() { return PS.get('ytResume', []); }
+  function resumeOf(id) { var r = resumes().filter(function (x) { return x.id === id; })[0]; return r || null; }
+  function card(v, key, i) {
+    var r = resumeOf(v.id), p = r && r.dur ? r.t / r.dur : 0;
+    return '<div class="vcard" data-focus data-kind="vid" data-list="' + key + '" data-i="' + i + '" data-id="' + esc(v.id) + '"><div class="vthumb" style="background:' + tint(v.title || v.id) + '">' +
+      (v.thumb ? '<img alt="" src="' + esc(v.thumb) + '" data-art>' : '') +
+      (v.live === 'live' ? '<span class="vdur live">LIVE</span>' : v.dur ? '<span class="vdur">' + fmtClock(v.dur) + '</span>' : '') +
+      (p > 0.02 ? '<i class="vprog" style="width:' + Math.round(p * 100) + '%"></i>' : '') +
+      '</div><div class="vtitle">' + esc(v.title || 'YouTube video') + '</div><div class="vsub">' + esc([v.channel, key === 'cont' && r ? fmtLen(r.dur - r.t) + ' left' : v.published ? fmtAgo(v.published) : ''].filter(Boolean).join(' · ')) + '</div></div>';
+  }
+  function row(key, title, items, empty) {
+    if (!items && !empty) return '';
+    return '<div class="wrow"><h3>' + esc(title) + '</h3><div class="wtrack" data-track="' + key + '">' +
+      (items && items.length ? items.map(function (v, i) { return card(v, key, i); }).join('') : '<div class="wempty">' + esc(empty || 'Nothing here yet') + '</div>') + '</div></div>';
+  }
+  function render() {
+    var keep = focused && document.body.contains(focused) && focused.closest('#watch') ? { id: focused.getAttribute('data-id'), list: focused.getAttribute('data-list'), k: focused.getAttribute('data-kind') } : null;
+    lists.cont = resumes().map(function (r) { return { id: r.id, title: r.title, channel: r.ch, channelId: r.chId, thumb: r.thumb, dur: r.dur }; });
+    var html = '';
+    if (chan) html += '<div class="wrow"><h3>Channel</h3><div class="wchan">' + (chan.thumb ? '<img alt="" src="' + esc(chan.thumb) + '">' : '') + '<b>' + esc(chan.name) + '</b><div class="btn" data-focus data-kind="wfollow">' + (isFollowing(chan.id) ? 'Unfollow' : 'Follow') + '</div></div></div>' + (chan.videos && chan.videos.length ? row('chan', 'Latest from ' + chan.name, chan.videos) : '');
+    if (query && !chan) html += row('res', 'Results for “' + query + '”', lists.res && lists.res.length ? lists.res : null, lists.res ? 'Nothing found' : 'Looking…');
+    if (lists.cont.length) html += row('cont', 'Continue', lists.cont);
+    if (ready === false) html += '<div class="wrow"><h3>YouTube</h3><div class="wempty">YouTube search and rows aren’t set up yet: ' + esc(BRAND) + '’s server needs a free YouTube Data API key. Videos sent from your phone still play here.</div></div>';
+    else {
+      if (follows().length) html += row('fol', 'From channels you follow', lists.fol, lists.fol ? 'No new videos' : 'Loading…');
+      html += row('pop', 'Popular on YouTube', lists.pop, lists.pop ? 'Nothing to show right now' : 'Loading…');
+      if (!follows().length && ready) html += '<div class="wrow"><div class="wempty">Follow channels from ☰ on any video, or search for @name above. Their new videos show up here.</div></div>';
+    }
+    $('wRows').innerHTML = html; wireCatArt($('wRows'));
+    if (jump && scope === 'home' && view === 'watch' && document.activeElement !== $('wInput')) {
+      var first = $('wRows').querySelector('[data-focus]'); if (first && (lists.res || chan)) { jump = false; setFocus(first); }
+    } else if (keep && view === 'watch' && scope === 'home') {
+      var again = keep.id ? $('wRows').querySelector('[data-list="' + keep.list + '"][data-id="' + keep.id + '"]') : keep.k === 'wfollow' ? $('wRows').querySelector('[data-kind="wfollow"]') : null;
+      if (again) setFocus(again); else if (!document.body.contains(focused)) setFocus($('wRows').querySelector('[data-focus]') || $('wbar'));
+    }
+  }
+  function load(force) {
+    if (loading || (!force && Date.now() - loadedAt < 15 * 60000 && lists.pop)) { render(); return; }
+    loading = true; render();
+    YtApi.call('status', {}).then(function (s) {
+      ready = !!s.ready; if (!ready) return;
+      var fl = follows().slice(0, 12);
+      return Promise.all([
+        YtApi.call('popular', {}).then(function (r) { lists.pop = r.videos || []; }).catch(function () { lists.pop = []; }),
+        fl.length ? Promise.all(fl.map(function (f) { return YtApi.call('channel', { ref: f.id }).then(function (r) { return r.channel; }).catch(function () { return null; }); })).then(function (cs) {
+          var all = []; cs.forEach(function (c) { if (c) (c.videos || []).slice(0, 6).forEach(function (v) { all.push(v); }); });
+          all.sort(function (a, b) { return (b.published || '').localeCompare(a.published || ''); }); lists.fol = all.slice(0, 24);
+        }) : null
+      ]).then(function () { loadedAt = Date.now(); });
+    }).catch(function (e) { if (e && e.code === 'youtube_not_set_up') ready = false; else { ready = ready === null ? true : ready; if (!lists.pop) lists.pop = []; $('wNote').textContent = YtApi.why(e); } })
+      .then(function () { loading = false; render(); });
+  }
+  function show() { $('wNote').textContent = 'Hold OK or press ☰ on a video for options'; load(false); }
+  function submit() {
+    var inp = $('wInput'), q = inp.value.trim().slice(0, 100); inp.blur();
+    if (!q) { query = ''; chan = null; lists.res = null; render(); return; }
+    var mySeq = ++seq; query = q; chan = null; lists.res = null; jump = true; render();
+    var vid = ytId(q);
+    if (vid) { YtApi.call('videos', { ids: [vid] }).then(function (r) { if (mySeq === seq) lists.res = r.videos || []; }).catch(function () { if (mySeq === seq) lists.res = [{ id: vid, title: 'YouTube video' }]; }).then(render); return; }
+    if (/^@[\w.-]{3,40}$/.test(q) || /youtube\.com\/(@|channel\/)/i.test(q)) {
+      YtApi.call('channel', { ref: q }).then(function (r) { if (mySeq === seq) chan = r.channel; }).catch(function (e) { if (mySeq === seq) { lists.res = []; toast(e && e.status === 404 ? 'No channel called ' + q : YtApi.why(e)); } }).then(render); return;
+    }
+    YtApi.call('search', { q: q }).then(function (r) { if (mySeq === seq) lists.res = r.videos || []; }).catch(function (e) { if (mySeq === seq) { lists.res = []; toast(YtApi.why(e)); } }).then(render);
+  }
+  function listOf(el) { var k = el.getAttribute('data-list'); return k === 'chan' ? (chan && chan.videos) || [] : lists[k] || []; }
+  function act(el) {
+    var k = el.getAttribute('data-kind');
+    if (k === 'winput') { $('wInput').focus(); return; }
+    if (k === 'wfollow') { follow(chan); render(); return; }
+    if (k === 'vid') { var l = listOf(el), i = +el.getAttribute('data-i'); if (l[i]) Yt.open(l[i], l, i, false); }
+  }
+  function menu(el) {
+    var l = listOf(el), i = +el.getAttribute('data-i'), v = l[i]; if (!v) return;
+    var items = [{ label: 'Play', fn: function () { Yt.open(v, l, i, true); } }];
+    if (v.channelId && !isGuest()) items.push({ label: (isFollowing(v.channelId) ? 'Unfollow ' : 'Follow ') + (v.channel || 'this channel'), fn: function () { follow({ id: v.channelId, name: v.channel || 'this channel' }); } });
+    if (el.getAttribute('data-list') === 'cont') items.push({ label: 'Remove from Continue', fn: function () { forget(v.id); render(); } });
+    items.push({ label: 'Open in YouTube', fn: function () { Yt.openApp(v.id); } });
+    openMenu(v.title || 'Video', v.channel || 'YouTube', items);
+  }
+  function forget(id) { PS.set('ytResume', resumes().filter(function (r) { return r.id !== id; })); }
+  function saveResume(v, t, d) {
+    if (isGuest() || !v) return;
+    var list = resumes().filter(function (r) { return r.id !== v.id; });
+    if (d > 0 && t > 20 && t < d - 30 && t / d < 0.95) list.unshift({ id: v.id, title: v.title || '', ch: v.channel || '', chId: v.channelId || '', thumb: v.thumb || '', dur: d, t: Math.floor(t), at: Date.now() });
+    PS.set('ytResume', list.slice(0, 30));
+  }
+  return { show: show, load: load, render: render, submit: submit, act: act, menu: menu, follow: follow, isFollowing: isFollowing, resumeOf: resumeOf, saveResume: saveResume, forget: forget };
+})();
+
+var Yt = (function () {
+  var apiP = null, player = null, cur = null, queue = [], qi = 0, state = 'card', prev = null, prevScope = 'home';
+  var ticker = 0, hideTimer = 0, rate = 1, cc = false, playing = false, lastSave = 0, recent = null, startedAt = 0;
+  var RATES = [1, 1.25, 1.5, 0.75];
+  function loadApi() {
+    if (window.YT && window.YT.Player) return Promise.resolve(window.YT);
+    if (apiP) return apiP;
+    apiP = new Promise(function (resolve, reject) {
+      var t = setTimeout(function () { apiP = null; reject(new Error('timeout')); }, 15000), before = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = function () { clearTimeout(t); if (typeof before === 'function') { try { before(); } catch (e) {} } resolve(window.YT); };
+      var s = document.createElement('script'); s.src = 'https://www.youtube.com/iframe_api';
+      s.onerror = function () { clearTimeout(t); apiP = null; reject(new Error('load')); };
+      document.head.appendChild(s);
+    });
+    return apiP;
+  }
+  function awake(on) { if (Native && Native.keepAwake) { try { Native.keepAwake(!!on); } catch (e) {} } }
+  function setState(s) { state = s; $('ytPane').setAttribute('data-state', s); }
+  function unfocus() { if (focused) focused.classList.remove('focused'); focused = null; }
+  function resumeAt(id) { var r = Watch.resumeOf(id); return r ? r.t : 0; }
+  function btnsHtml(list) { return list.map(function (b, i) { return '<div class="btn' + (i === 0 ? ' primary' : '') + '" data-focus data-kind="' + b.k + '"' + (b.t != null ? ' data-t="' + b.t + '"' : '') + '>' + esc(b.label) + '</div>'; }).join(''); }
+  function renderCard(msg) {
+    if (!cur) return;
+    var art = $('ytArt'); art.style.backgroundImage = '';
+    if (cur.thumb) { var im = new Image(), u = cur.thumb; im.onload = function () { if (cur && cur.thumb === u) art.style.backgroundImage = 'url("' + u + '")'; }; im.src = u; }
+    $('ytTitle').textContent = cur.title || 'YouTube video';
+    $('ytMeta').textContent = [cur.channel, cur.live === 'live' ? 'Live now' : cur.dur ? fmtLen(cur.dur) : '', cur.published ? fmtAgo(cur.published) : ''].filter(Boolean).join('  ·  ');
+    $('ytDesc').textContent = cur.desc || '';
+    var blocked = cur.embeddable === false;
+    $('ytNote').textContent = msg || (blocked ? 'Its owner doesn’t allow this video to play outside YouTube.' : '');
+    var r = resumeAt(cur.id), b = [];
+    if (!blocked && !msg) { if (r) { b.push({ k: 'yplay', t: r, label: 'Resume from ' + fmtClock(r) }); b.push({ k: 'yplay', t: 0, label: 'Start over' }); } else b.push({ k: 'yplay', t: 0, label: 'Play' }); }
+    b.push({ k: 'yapp', label: 'Open in YouTube' });
+    if (cur.channelId && !isGuest()) b.push({ k: 'yfollow', label: (Watch.isFollowing(cur.channelId) ? 'Unfollow ' : 'Follow ') + (cur.channel || 'this channel') });
+    b.push({ k: 'yask', label: 'Ask ' + BRAND + ' about this' });
+    b.push({ k: 'yclose', label: 'Back' });
+    var keepK = focused && focused.closest && focused.closest('#ytBtns') ? focused.getAttribute('data-kind') : null;
+    $('ytBtns').innerHTML = btnsHtml(b);
+    setFocus((keepK && $('ytBtns').querySelector('[data-kind="' + keepK + '"]')) || $('ytBtns').children[0]);
+  }
+  function open(v, list, i, autoplay) {
+    if (!v || !/^[A-Za-z0-9_-]{11}$/.test(v.id || '')) return;
+    if (isKids()) { toast('YouTube isn’t on kids profiles yet'); return; }
+    if (scope !== 'yt') { prev = focused; prevScope = scope; }
+    stopVideo();
+    cur = Object.assign({}, v); queue = list && list.length ? list : [v]; qi = list && list.length ? i || 0 : 0;
+    $('ytPane').classList.add('on'); scope = 'yt'; setState('card'); renderCard();
+    if (!cur.title || !cur.dur || cur.desc == null) YtApi.call('videos', { ids: [cur.id] }).then(function (r) {
+      var d = (r.videos || [])[0]; if (!d || !cur || cur.id !== d.id) return;
+      Object.assign(cur, d); if (state === 'card') renderCard(); else renderPanel();
+    }).catch(function () {});
+    if (autoplay) play(resumeAt(cur.id));
+  }
+  function play(t) {
+    if (!cur) return;
+    setState('full'); unfocus(); awake(true); playing = false; startedAt = Date.now();
+    loadApi().then(function (YT) {
+      if (!cur || scope !== 'yt' || state === 'card') return;
+      destroy();
+      var host = document.createElement('div'); $('ytFrame').appendChild(host);
+      player = new YT.Player(host, {
+        width: '100%', height: '100%', videoId: cur.id,
+        playerVars: { autoplay: 1, controls: 0, disablekb: 1, fs: 0, rel: 0, iv_load_policy: 3, playsinline: 1, cc_load_policy: cc ? 1 : 0, cc_lang_pref: 'en', hl: 'en-GB', start: Math.floor(t || 0), origin: location.origin, widget_referrer: location.href },
+        events: { onReady: onReady, onStateChange: onState, onError: onError }
+      });
+    }).catch(function () { fail('Couldn’t load YouTube’s player. Check the TV is online and try again.'); });
+    clearInterval(ticker); ticker = setInterval(tick, 500);
+  }
+  function onReady(e) {
+    var f = $('ytFrame').querySelector('iframe'); if (f) f.setAttribute('tabindex', '-1');
+    try { if (rate !== 1) e.target.setPlaybackRate(rate); e.target.playVideo(); } catch (x) {}
+    // Browsers on phones may block autoplay: show Cleo's panel so Play can be pressed.
+    setTimeout(function () { if (player && !playing && state === 'full') stepBack('ypp'); }, 3000);
+  }
+  function onState(e) {
+    var s = e.data; playing = s === 1;
+    if (s === 1 || s === 2) { renderPanel(); Home.followPlayback(); }
+    if (s === 2) { save(true); if (state === 'full') stepBack('ypp'); }
+    if (s === 1 && state === 'back') armHide();
+    if (s === 0) ended();
+  }
+  function onError(e) {
+    var c = e && e.data;
+    fail(c === 100 ? 'This video has been removed or made private.' : c === 101 || c === 150 ? 'Its owner doesn’t allow this video to play outside YouTube.' : c === 2 ? 'That video link isn’t valid.' : c === 152 || c === 153 ? 'YouTube wouldn’t start its player here.' : 'This video couldn’t play on this TV.');
+  }
+  function fail(msg) { destroy(); awake(false); clearInterval(ticker); setState('error'); renderCard(msg); Home.followPlayback(); }
+  function destroy() { if (player) { try { player.destroy(); } catch (e) {} } player = null; playing = false; $('ytFrame').innerHTML = ''; }
+  function times() { try { return { t: player.getCurrentTime() || 0, d: player.getDuration() || cur.dur || 0 }; } catch (e) { return { t: 0, d: cur && cur.dur || 0 }; } }
+  function save(force) {
+    if (!player || !cur) return; var x = times(); if (!x.d) return;
+    if (force || Date.now() - lastSave > 15000) { lastSave = Date.now(); Watch.saveResume(cur, x.t, x.d); }
+    recent = { title: cur.title, channel: cur.channel, desc: cur.desc, t: x.t, d: x.d, at: Date.now() };
+  }
+  function tick() {
+    // Keep the remote's keys in Cleo even if YouTube's frame grabs focus.
+    var ae = document.activeElement; if (ae && ae.tagName === 'IFRAME') { try { ae.blur(); window.focus(); } catch (e) {} }
+    if (!player || !cur) return;
+    var x = times();
+    $('ytBar').firstChild.style.width = (x.d ? Math.min(100, x.t / x.d * 100) : 0) + '%';
+    $('ytTime').textContent = fmtClock(x.t) + ' / ' + fmtClock(x.d) + (x.d - x.t > 60 ? '  ·  ' + fmtLen(x.d - x.t) + ' left' : '');
+    if (playing) save(false);
+  }
+  function renderPanel() {
+    if (!cur) return;
+    $('ytNow').innerHTML = esc(cur.title || 'YouTube video') + (cur.channel ? '<small>' + esc(cur.channel) + '</small>' : '');
+    var keepK = focused && focused.closest && focused.closest('#ytCtrls') ? focused.getAttribute('data-kind') : null;
+    var pp = playing ? '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>' : '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15L19.5 12z"/></svg>';
+    var b = [
+      '<div class="btn" data-focus data-kind="yrw">−10 s</div>',
+      '<div class="btn" data-focus data-kind="ypp" aria-label="' + (playing ? 'Pause' : 'Play') + '">' + pp + '</div>',
+      '<div class="btn" data-focus data-kind="yff">+10 s</div>',
+      '<div class="btn" data-focus data-kind="yrate">' + rate + '×</div>',
+      '<div class="btn" data-focus data-kind="ycc">' + (cc ? 'Captions on' : 'Captions off') + '</div>',
+      '<div class="gap"></div>',
+      queue[qi + 1] ? '<div class="btn" data-focus data-kind="ynext">Up next</div>' : '',
+      '<div class="btn" data-focus data-kind="yask">Ask ' + esc(BRAND) + '</div>'
+    ];
+    $('ytCtrls').innerHTML = b.join('');
+    if (keepK && state === 'back') { var k = $('ytCtrls').querySelector('[data-kind="' + keepK + '"]'); if (k) setFocus(k); }
+  }
+  function stepBack(focusKind) {
+    if (state !== 'full' && state !== 'back') return;
+    if (state === 'full') { setState('back'); renderPanel(); }
+    var el = focusKind === 'bar' ? $('ytBar') : $('ytCtrls').querySelector('[data-kind="' + (focusKind || 'ypp') + '"]');
+    if (el && (!focused || !focused.closest('#ytPanel'))) setFocus(el); else if (el && focusKind) setFocus(el);
+    tick(); armHide();
+  }
+  function full() { clearTimeout(hideTimer); if (state !== 'back') return; setState('full'); unfocus(); }
+  function armHide() { clearTimeout(hideTimer); hideTimer = setTimeout(function () { if (state === 'back' && playing && scope === 'yt') full(); }, 5000); }
+  function seek(d) { if (!player) return; var x = times(); try { player.seekTo(Math.max(0, Math.min(x.d ? x.d - 1 : 1e9, x.t + d)), true); } catch (e) {} if (state === 'full') stepBack('bar'); else armHide(); setTimeout(tick, 150); }
+  function toggle() { if (!player) return; try { if (playing) player.pauseVideo(); else player.playVideo(); } catch (e) {} }
+  function ended() {
+    save(true); Watch.forget(cur.id); awake(false); playing = false; Home.followPlayback(); clearTimeout(hideTimer);
+    setState('next');
+    var nexts = queue.slice(qi + 1, qi + 4), html = '<div class="nitem" data-focus data-kind="yagain"><div class="nth" style="background-image:url(\'' + esc(cur.thumb || '') + '\')"></div><div class="ntx"><b>Watch again</b><small>' + esc(cur.title || '') + '</small></div></div>';
+    nexts.forEach(function (v, j) { html += '<div class="nitem" data-focus data-kind="yq" data-q="' + (qi + 1 + j) + '"><div class="nth" style="background-image:url(\'' + esc(v.thumb || '') + '\')"></div><div class="ntx"><b>' + esc(v.title || 'YouTube video') + '</b><small>' + esc([v.channel, v.dur ? fmtLen(v.dur) : ''].filter(Boolean).join(' · ')) + '</small></div></div>'; });
+    html += '<div class="nitem" data-focus data-kind="yclose"><div class="ntx"><b>Back to Watch</b></div></div>';
+    $('ytNextTitle').textContent = nexts.length ? nexts[0].title : 'That’s the end';
+    $('ytNextList').innerHTML = html;
+    setFocus($('ytNextList').querySelector(nexts.length ? '[data-kind="yq"]' : '[data-kind="yagain"]'));
+  }
+  function stopVideo() { if (player) save(true); destroy(); clearInterval(ticker); clearTimeout(hideTimer); awake(false); }
+  function toCard() { stopVideo(); setState('card'); renderCard(); Home.followPlayback(); }
+  function close() {
+    stopVideo(); $('ytPane').classList.remove('on'); scope = prevScope === 'yt' || prevScope === 'menu' ? 'home' : prevScope; cur = null; setState('card');
+    var pid = prev && prev.getAttribute ? prev.getAttribute('data-id') : null, plist = pid ? prev.getAttribute('data-list') : null;
+    unfocus(); Home.followPlayback();
+    if (view === 'watch' && scope === 'home') Watch.render(); // refreshes Continue
+    var back = prev && document.body.contains(prev) ? prev : pid ? $('wRows').querySelector('[data-list="' + plist + '"][data-id="' + pid + '"]') || $('wRows').querySelector('[data-id="' + pid + '"]') : null;
+    setFocus(back || defaultFocus());
+  }
+  function openApp(id) { if (!Native || !Native.openUrl || !Native.openUrl('https://www.youtube.com/watch?v=' + id)) toast(Native ? 'The YouTube app isn’t installed' : 'Would open YouTube'); }
+  function ask() {
+    var v = cur; save(true); close(); openChat();
+    sendChat('Tell me about this YouTube video I was just watching' + (v && v.title ? ': “' + v.title + '”' + (v.channel ? ' from ' + v.channel : '') : '') + '.');
+  }
+  function act(el) {
+    var k = el.getAttribute('data-kind');
+    if (k === 'yplay') { play(+el.getAttribute('data-t') || 0); return; }
+    if (k === 'yapp') { var id = cur && cur.id; close(); if (id) openApp(id); return; }
+    if (k === 'yfollow') { Watch.follow({ id: cur.channelId, name: cur.channel || 'this channel' }); renderCard(); return; }
+    if (k === 'yask') { ask(); return; }
+    if (k === 'yclose') { close(); return; }
+    if (k === 'yagain') { play(0); return; }
+    if (k === 'yq') { var j = +el.getAttribute('data-q'); if (queue[j]) { qi = j; cur = Object.assign({}, queue[j]); renderCard(); play(resumeAt(cur.id)); } return; }
+    if (k === 'ypp') { toggle(); armHide(); return; }
+    if (k === 'yrw') { seek(-10); return; }
+    if (k === 'yff' || k === 'ybar') { seek(10); return; }
+    if (k === 'yrate') { rate = RATES[(RATES.indexOf(rate) + 1) % RATES.length]; try { player.setPlaybackRate(rate); } catch (e) {} renderPanel(); armHide(); return; }
+    if (k === 'ycc') { cc = !cc; var x = player ? times() : { t: 0 }; renderPanel(); play(x.t); return; } // captions are chosen when the player starts
+    if (k === 'ynext') { if (queue[qi + 1]) { save(true); qi++; cur = Object.assign({}, queue[qi]); renderCard(); play(resumeAt(cur.id)); } }
+  }
+  // Remote keys while the player is open. Returns true when handled here.
+  function key(what) {
+    if (scope !== 'yt') return false;
+    if (state === 'full') {
+      if (what === 'ok') toggle();
+      else if (what === 'left') seek(-10);
+      else if (what === 'right') seek(10);
+      else if (what === 'back') toCard();
+      else stepBack('ypp');
+      return true;
+    }
+    if (state === 'back') {
+      armHide();
+      if ((what === 'left' || what === 'right') && focused === $('ytBar')) { seek(what === 'left' ? -10 : 10); return true; }
+      if (what === 'back') { if (playing) full(); else toCard(); return true; }
+      if (what === 'menu') return true;
+      return false;
+    }
+    if (what === 'back') { if (state === 'card') close(); else toCard(); return true; }
+    if (what === 'menu') return true;
+    return false;
+  }
+  function mediaKey(k) {
+    if (scope === 'yt' && player) { if (k === 'rewind') seek(-10); else if (k === 'forward') seek(10); else toggle(); return; }
+    if (k === 'playpause' && np && np.title) mediaAction('playpause');
+  }
+  // Tapping the picture on a phone or computer does what a button on the remote would.
+  $('ytPane').addEventListener('click', function (e) { if (state === 'full' && !(e.target.closest && e.target.closest('[data-focus]'))) stepBack('ypp'); });
+  return {
+    open: open, close: close, act: act, key: key, mediaKey: mediaKey, openApp: openApp,
+    active: function () { return !!(cur && (state === 'full' || state === 'back') && player); },
+    isPlaying: function () { return !!(player && playing); },
+    pause: function () { if (player && playing) { try { player.pauseVideo(); } catch (e) {} } awake(false); },
+    // Before Cleo shows a message, the picture steps back so the message sits below the video, not on it.
+    reveal: function () { if (scope === 'yt' && state === 'full' && player) stepBack(null); },
+    recent: function () { if (cur && player) save(false); return recent && Date.now() - recent.at < 20 * 60000 ? recent : null; }
+  };
+})();
+function ytCommand(text) {
+  var t = String(text || '').trim().replace(/[.!?]+$/, ''), m;
+  if ((m = /^(?:please\s+)?(?:play|put on|watch|show me)\s+(?:the\s+)?trailer\s+(?:for|of|to)\s+(.{2,80})$/i.exec(t))) return { q: m[1] + ' official trailer', said: 'the trailer for ' + m[1] };
+  if ((m = /^(?:please\s+)?(?:play|put on|watch|show me)\s+(.{2,80}?)\s+(?:on|from)\s+youtube$/i.exec(t))) return { q: m[1], said: m[1] };
+  return null;
 }
 
 /* ======================= Control Center ======================= */
@@ -1847,6 +2279,12 @@ function screenContext(info) {
   return '\n' + lines.join('\n');
 }
 function screenContextFor(text) {
+  var yr = Yt.recent();
+  if (yr && !npIsVideo() && (SCREEN_Q.test(text) || /\b(video|clip|youtube|channel)\b/i.test(text))) {
+    var mm = function (s) { return Math.round(s / 60); };
+    return Promise.resolve('\nJust watched in ' + BRAND + '’s YouTube player: "' + yr.title + '"' + (yr.channel ? ' from the channel ' + yr.channel : '') + ', stopped about ' + mm(yr.t) + ' of ' + mm(yr.d) + ' minutes in.' +
+      (yr.desc ? ' Its description: ' + yr.desc : '') + '\nAnswer from these details; if they don’t cover something, say you can’t tell from here.');
+  }
   if (!npIsVideo() || !SCREEN_Q.test(text)) return Promise.resolve('');
   return withTimeout(screenInfo(), 3500).then(function (info) { return screenContext(info); }).catch(function () { return screenContext(null); });
 }
@@ -2162,7 +2600,8 @@ var Home = (function () {
   function watchLights() { var ids = (cfg.watch && cfg.watch.lights) || []; return ids.map(byId).filter(Boolean); }
   function followPlayback() {
     if (!cfg.watch || !cfg.watch.on || isKids()) return;
-    var now = npIsVideo() && np.playing ? 'playing' : npIsVideo() ? 'paused' : 'idle';
+    var yt = typeof Yt !== 'undefined' && Yt.active(), vid = yt || npIsVideo(), on = yt ? Yt.isPlaying() : np && np.playing;
+    var now = vid && on ? 'playing' : vid ? 'paused' : 'idle';
     if (now === watchState) return;
     var prev = watchState; watchState = now;
     load().then(function () {
@@ -2344,19 +2783,22 @@ var PhoneLink = (function () {
     if (!settings.phoneLink || isKids()) return; // never on a kids profile
     n.from = String(n.from || 'Someone').slice(0, 60); n.text = String(n.text || '').slice(0, 300);
     if (n.kind === 'callend') { if (pausedForCall) { pausedForCall = false; } return; }
-    if (n.kind !== 'call' && settings.filmDnd && npIsVideo() && np.playing) { held.push(n); return; } // calls always come through
+    if (n.kind !== 'call' && settings.filmDnd && ((npIsVideo() && np.playing) || Yt.isPlaying())) { held.push(n); return; } // calls always come through
     show(n);
   }
   function title(n) { return n.kind === 'call' ? n.from + ' is calling' : n.from + (n.app && !/messages|sms/i.test(n.app) ? ' · ' + n.app : ''); }
   function body(n) { return n.kind === 'call' ? (n.app && !/phone|dialer|telecom/i.test(n.app) ? n.app + ' call' : 'Incoming call') : settings.phonePreview && n.text ? n.text : 'New message'; }
   function show(n) {
     recent.unshift(n); recent = recent.slice(0, 8);
-    if (n.kind === 'call' && settings.callPause && np && np.playing && Native && Native.media) { Native.media('pause'); pausedForCall = true; }
-    if (Native && Native.showOverlay) Native.showOverlay(title(n), body(n)); else toast(title(n) + ' · ' + body(n));
+    var inYt = Yt.active();
+    if (n.kind === 'call' && settings.callPause && inYt) { Yt.pause(); pausedForCall = true; }
+    else if (n.kind === 'call' && settings.callPause && np && np.playing && Native && Native.media) { Native.media('pause'); pausedForCall = true; }
+    // In Cleo's YouTube player, notices go below the picture instead of over it.
+    if (Native && Native.showOverlay && !inYt) Native.showOverlay(title(n), body(n)); else toast(title(n) + ' · ' + body(n));
     Sound.reply();
     if (typeof CC !== 'undefined') CC.refresh();
   }
-  function flush() { if (!held.length || (npIsVideo() && np.playing)) return; var h = held.splice(0); if (h.length === 1) show(h[0]); else { h.forEach(function (n) { recent.unshift(n); }); recent = recent.slice(0, 8); if (Native && Native.showOverlay) Native.showOverlay(h.length + ' messages', 'While you were watching: ' + listJoinPlain(h.map(function (n) { return n.from; }).filter(function (v, i, a) { return a.indexOf(v) === i; }).slice(0, 3))); else toast(h.length + ' messages while you were watching'); } }
+  function flush() { if (!held.length || (npIsVideo() && np.playing) || Yt.isPlaying()) return; var h = held.splice(0); if (h.length === 1) show(h[0]); else { h.forEach(function (n) { recent.unshift(n); }); recent = recent.slice(0, 8); if (Native && Native.showOverlay) Native.showOverlay(h.length + ' messages', 'While you were watching: ' + listJoinPlain(h.map(function (n) { return n.from; }).filter(function (v, i, a) { return a.indexOf(v) === i; }).slice(0, 3))); else toast(h.length + ' messages while you were watching'); } }
   var QUICK = ['Watching something, I’ll call you back', 'On my way', 'Yes', 'No', 'Can’t talk right now'];
   function canReply(n) { return n.srcKind === 'android' && n.pk && n.key; }
   function reply(n, text) {
@@ -2648,7 +3090,7 @@ function openPick(i) {
 var focused = null, scope = 'home', view = 'home', lastFocus = {};
 function scopeRoot() {
   if (scope === 'menu') return $('menu'); if (scope === 'settings') return $('settingsPane'); if (scope === 'chat') return $('chat');
-  if (scope === 'pin') return $('pinPane'); if (scope === 'link') return $('linkPane'); if (scope === 'who') return $('whoPane'); if (scope === 'journal') return $('journalPane'); if (scope === 'title') return $('titlePane'); if (scope === 'photo') return $('photoPane'); if (scope === 'cc') return $('cc'); if (scope === 'house') return $('housePane'); if (scope === 'knows') return $('knowsPane'); if (scope === 'setup') return setupStepEl(setupState.step);
+  if (scope === 'pin') return $('pinPane'); if (scope === 'link') return $('linkPane'); if (scope === 'who') return $('whoPane'); if (scope === 'journal') return $('journalPane'); if (scope === 'title') return $('titlePane'); if (scope === 'yt') return $('ytPane'); if (scope === 'photo') return $('photoPane'); if (scope === 'cc') return $('cc'); if (scope === 'house') return $('housePane'); if (scope === 'knows') return $('knowsPane'); if (scope === 'setup') return setupStepEl(setupState.step);
   return null;
 }
 function focusables() {
@@ -2661,6 +3103,7 @@ function focusables() {
 function defaultFocus() {
   if (view === 'apps') return $('grid').querySelector('.tile') || document.querySelector('.tab[data-view="apps"]');
   if (view === 'search') return $('sbar');
+  if (view === 'watch') return $('wRows').querySelector('[data-focus]') || $('wbar');
   var t = $('dock').querySelectorAll('.tile'); return (isKids() ? t[0] : t[1] || t[0]) || $('picks').querySelector('.pick') || document.querySelector('.tab[data-view="apps"]');
 }
 function setFocus(el) {
@@ -2704,8 +3147,12 @@ function scrollView(el) {
     if (el.closest('#grid')) { var top = 0, n = el; while (n && n !== $('appsStage')) { top += n.offsetTop; n = n.offsetParent; } y = Math.max(0, top - 24 * remPx()); }
     $('appsStage').style.transform = 'translate3d(0,' + (-y) + 'px,0)';
     document.body.classList.toggle('scrolled', y > 0);
+  } else if (view === 'watch') {
+    var wr = el.closest('.wrow'), wy = wr ? Math.max(0, wr.offsetTop - 21 * remPx()) : 0;
+    $('watchStage').style.transform = 'translate3d(0,' + (-wy) + 'px,0)';
+    document.body.classList.toggle('scrolled', wy > 0);
   } else document.body.classList.remove('scrolled');
-  var tr = el.closest('#sTitles, #sApps');
+  var tr = el.closest('#sTitles, #sApps, .wtrack');
   if (tr) { var tx = el.offsetLeft, tw = el.offsetWidth, vw = innerWidth - 11.2 * remPx(), c2 = tr._x || 0; if (tx + tw + c2 > vw) c2 = vw - tx - tw; if (tx + c2 < 0) c2 = -tx; tr._x = Math.min(0, c2); tr.style.transform = 'translate3d(' + tr._x + 'px,0,0)'; }
   if (el.closest('#dock')) {
     var track = $('dock'), x = el.offsetLeft, w = el.offsetWidth, viewW = innerWidth - 11.2 * remPx(), cur = track._x || 0;
@@ -2716,8 +3163,10 @@ function scrollView(el) {
 }
 function showView(v) {
   if (v === 'cleo') { openChat(); return; }
+  if (v === 'watch' && isKids()) return;
   view = v; document.body.setAttribute('data-view', v);
   if (v === 'search' && !$('sResults').innerHTML) renderSearch();
+  if (v === 'watch') Watch.show();
   if (v !== 'home' && v !== 'search') setBackdrop(null);
   var tabs = document.querySelectorAll('.tab');
   for (var i = 0; i < tabs.length; i++) tabs[i].classList.toggle('on', tabs[i].getAttribute('data-view') === v);
@@ -2733,12 +3182,14 @@ function activate(el) {
   if (scope === 'link') { if (el.getAttribute('data-kind') === 'linkretry') Cid.start(); else Cid.close(false); return; }
   var k = el.getAttribute('data-kind');
   if (scope === 'title') { titleActivate(el); return; }
+  if (scope === 'yt') { Yt.act(el); return; }
   if (scope === 'photo') { Shared.toggleShow(); return; }
   if (scope === 'cc') { CC.act(el); return; }
   if (scope === 'knows') { Knows.act(el); return; }
   if (scope === 'house') { if (el.id === 'houseClose') House.close(); else homeDeviceAct(Home.byId(el.getAttribute('data-id')), el); return; }
   if (el.getAttribute('data-kind') === 'cc') { CC.open(); return; }
   if (k === 'sinput') { $('searchInput').focus(); return; }
+  if (k === 'winput' || k === 'vid' || k === 'wfollow') { Watch.act(el); return; }
   if (k === 'srecent') { $('searchInput').value = el.textContent; searchJump = true; runSearch(el.textContent, true); return; }
   if (k === 'title') { openTitle(el.getAttribute('data-id'), el.getAttribute('data-type'), null); return; }
   if (k === 'sask') { openChat(); sendChat('Tell me about ' + searchQ + '.'); return; }
@@ -2766,15 +3217,17 @@ function activate(el) {
   }
 }
 function options(el) {
+  if (scope === 'yt') { Yt.key('menu'); return; }
   if (scope === 'photo') { Shared.menu(); return; }
   if (scope === 'cc') { if (el && el.getAttribute('data-kind') === 'cchdev') homeDeviceMenu(Home.byId(el.getAttribute('data-id'))); else CC.close(); return; }
   if (scope === 'house') { if (el && el.getAttribute('data-kind') === 'hdev') homeDeviceMenu(Home.byId(el.getAttribute('data-id'))); return; }
-  if (scope === 'home' && (!el || !/^(app|cw|rate|pick|cleo)$/.test(el.getAttribute('data-kind') || ''))) { CC.open(); return; } // ☰ anywhere else opens Control Center
+  if (scope === 'home' && (!el || !/^(app|cw|rate|pick|cleo|vid)$/.test(el.getAttribute('data-kind') || ''))) { CC.open(); return; } // ☰ anywhere else opens Control Center
   if (el && el.getAttribute('data-kind') === 'srow') { el.classList.toggle('showhelp'); return; }
   if (!el || scopeRoot()) return;
   var k = el.getAttribute('data-kind');
   if (k === 'app') appMenu(el.getAttribute('data-pkg'), !!el.closest('#dock'));
   else if (k === 'cw') { var c1 = cwByKey(el.getAttribute('data-key')); if (c1) cwMenu(c1); }
+  else if (k === 'vid') Watch.menu(el);
   else if (k === 'rate') { var c2 = cwByKey(el.getAttribute('data-key')); if (c2) rateMenu(c2); }
   else if (k === 'pick') openMenu('Tonight’s picks', '', [
     { label: 'Open', fn: function () { openPick(+el.getAttribute('data-i')); } },
@@ -2811,6 +3264,7 @@ function openRedirectMenu() {
 var menuActions = [], menuReturn = null;
 var menuPrev = 'home';
 function openMenu(title, sub, items) {
+  if (scope === 'yt') Yt.close();
   menuReturn = focused; menuPrev = scope === 'menu' ? menuPrev : scope;
   $('menuTitle').textContent = title; $('menuSub').textContent = sub || '';
   menuActions = items.map(function (i) { return i.fn; });
@@ -3022,6 +3476,7 @@ var ROW = {
   pRem: { label: 'Reminders', type: 'info', fmt: function () { return 'Stay on this TV'; } },
   pWeather2: { label: 'Weather backup', type: 'info', fmt: function () { return settings.location ? 'MET Norway, if Open-Meteo is down' : 'Not set'; }, hint: 'Only the town’s coordinates' },
   pShare: { label: 'Send to TV', type: 'info', fmt: function () { return 'Through ' + BRAND + ' servers, deleted once the TV has it'; }, hint: 'Links only open after someone at the TV says yes' },
+  pYt: { label: 'YouTube in Watch', type: 'info', fmt: function () { return 'Searches go to Google through ' + BRAND + '’s server; videos play from YouTube'; }, hint: 'What you watch and follow stays on this TV. YouTube sees what it plays, under Google’s terms' },
   pWatch: { label: 'Continue Watching, ratings, journal', type: 'info', fmt: function () { return 'Stay on this TV'; }, hint: 'Ratings shape picks: only titles are sent' },
   pVoice: { label: 'Read aloud', type: 'info', fmt: function () { return 'The TV’s own voice, nothing sent'; } },
   pAgreed: { label: 'Agreed to the terms', type: 'info', fmt: function () { return settings.consentAt ? fmtDate(settings.consentAt) : 'Not yet'; } },
@@ -3054,7 +3509,7 @@ var SECTIONS = [
   { id: 'phone', name: 'Phone link', blurb: 'Calls and messages from your phone, on the TV.', rows: ['phoneLink', 'phonePreview', 'callPause', 'filmDnd', 'btCheck'] },
   { id: 'weather', name: 'Weather', blurb: 'For the clock, ambient mode and picks.', rows: ['location', 'units'] },
   { id: 'display', name: 'Display & motion', blurb: 'Easier on the eyes, and on the stick.', rows: ['reduceMotion', 'largeText', 'perf', 'sounds'] },
-  { id: 'privacy', name: 'Privacy', blurb: 'What leaves this TV, and where it goes.', rows: ['pChats', 'pApps', 'pNote', 'pTown', 'pSearch', 'pCards', 'pShare', 'pVis', 'pPhone', 'pSmart', 'pUpdate', 'pRem', 'pWeather2', 'pLocal', 'pWatch', 'pHome', 'pVoice', 'pCid', 'pAgreed', 'pTerms'] },
+  { id: 'privacy', name: 'Privacy', blurb: 'What leaves this TV, and where it goes.', rows: ['pChats', 'pApps', 'pNote', 'pTown', 'pSearch', 'pCards', 'pShare', 'pVis', 'pPhone', 'pSmart', 'pUpdate', 'pRem', 'pWeather2', 'pLocal', 'pWatch', 'pYt', 'pHome', 'pVoice', 'pCid', 'pAgreed', 'pTerms'] },
   { id: 'about', name: 'About', blurb: 'Version, help and the advanced bits.', rows: ['version', 'update', 'device', 'media', 'firetv', 'worker', 'reset'] }
 ];
 function rowValueHtml(id) {
@@ -3688,6 +4143,20 @@ function sendChat(text, notHome) {
     });
     return;
   }
+  var yc = isKids() ? null : ytCommand(text);
+  if (yc) {
+    $('chatInput').value = ''; $('chatInput').blur();
+    chatLog.push({ role: 'user', text: text, t: Date.now() });
+    thinking = true; document.body.classList.add('thinking'); renderChat(); renderChips([]);
+    YtApi.call('search', { q: yc.q }).then(function (r) { return r.videos || []; }, function (e) { return { err: YtApi.why(e) }; }).then(function (vs) {
+      thinking = false; document.body.classList.remove('thinking');
+      var said = vs.err ? vs.err : vs.length ? 'Playing ' + yc.said + ' from YouTube: “' + vs[0].title + '”.' : 'I couldn’t find ' + yc.said + ' on YouTube.';
+      chatLog.push({ role: 'cleo', text: said, t: Date.now() }); PS.set('chat', chatLog.slice(-60)); renderChat(); Sound.reply();
+      if (!vs.err && vs.length) setTimeout(function () { if (scope === 'chat') closeChat(); Yt.open(vs[0], vs, 0, true); }, 900);
+      else if (scope === 'chat') setFocus($('composer'));
+    });
+    return;
+  }
   var rc = remindCommand(text);
   if (rc) {
     $('chatInput').value = ''; $('chatInput').blur();
@@ -4168,11 +4637,12 @@ function back() {
   if (scope === 'who') return closeWho();
   if (scope === 'journal') return closeJournal();
   if (scope === 'title') return closeTitle();
+  if (scope === 'yt') { Yt.key('back'); return; }
   if (scope === 'photo') return Shared.close();
   if (scope === 'cc') return CC.close();
   if (scope === 'house') return House.close();
   if (scope === 'knows') return Knows.close();
-  if (view === 'search' && scope === 'home') { showView('home'); setFocus(defaultFocus()); return; }
+  if ((view === 'search' || view === 'watch') && scope === 'home') { showView('home'); setFocus(defaultFocus()); return; }
   if (scope === 'setup') { if (setupState.step > 0) goStep(setupState.step - 1); return; }
   if (scope === 'settings') { if (focused && focused.classList.contains('row')) { setFocus(document.querySelector('.sec[data-sec="' + curSec + '"]')); return; } return closeSettings(); }
   if (scope === 'chat') return closeChat();
@@ -4194,7 +4664,7 @@ document.addEventListener('keydown', function (e) {
   }
   var ae = document.activeElement;
   if (ae && ae.tagName === 'INPUT') {
-    if (isOk(e)) { e.preventDefault(); if (ae.id === 'chatInput') sendChat(ae.value); else if (ae.id === 'searchInput') submitSearch(); else if (ae.id === 'setupName') { ae.blur(); setupActivate(document.querySelector('[data-kind="namenext"]')); } else commitText(ae); }
+    if (isOk(e)) { e.preventDefault(); if (ae.id === 'chatInput') sendChat(ae.value); else if (ae.id === 'searchInput') submitSearch(); else if (ae.id === 'wInput') Watch.submit(); else if (ae.id === 'setupName') { ae.blur(); setupActivate(document.querySelector('[data-kind="namenext"]')); } else commitText(ae); }
     else if (e.key === 'Escape') { e.preventDefault(); back(); }
     else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); var it = ae.closest('.item'); if (it) it.classList.remove('editing'); ae.blur(); move(e.key === 'ArrowUp' ? 'up' : 'down'); }
     return;
@@ -4203,6 +4673,7 @@ document.addEventListener('keydown', function (e) {
   var dir = dirs[e.key] || dirs[e.keyCode];
   if (dir) {
     e.preventDefault();
+    if (scope === 'yt' && Yt.key(dir)) return;
     if (moveMode) { if (dir === 'left') moveBy(-1); if (dir === 'right') moveBy(1); return; }
     if (scope === 'pin' && (dir === 'up' || dir === 'down')) { pinStep(dir === 'up' ? 1 : -1); return; }
     if (scope === 'photo') { if (dir === 'left' || dir === 'right') Shared.step(dir === 'left' ? -1 : 1); return; }
@@ -4214,6 +4685,7 @@ document.addEventListener('keydown', function (e) {
   if (isOk(e)) {
     e.preventDefault();
     if (e.repeat || okDown) return;
+    if (scope === 'yt' && Yt.key('ok')) return;
     okDown = true; held = false; clearTimeout(holdTimer);
     holdTimer = setTimeout(function () { held = true; options(focused); }, 650);
     return;
@@ -4275,11 +4747,14 @@ window.iole = {
   home: function () {
     Amb.exit(); if (moveMode) endMove();
     if (scope === 'setup' || scope === 'link') return;
-    if (scope === 'pin') closePin(false); if (scope === 'menu') closeMenu(); if (scope === 'journal') closeJournal(); if (scope === 'title') closeTitle(); if (scope === 'photo') Shared.close(); if (scope === 'cc') CC.close(); if (scope === 'house') House.close(); if (scope === 'knows') Knows.close(); if (scope === 'who') { closeWho(); return; }
+    if (scope === 'menu') closeMenu(); if (scope === 'yt') Yt.close();
+    if (scope === 'pin') closePin(false); if (scope === 'journal') closeJournal(); if (scope === 'title') closeTitle(); if (scope === 'photo') Shared.close(); if (scope === 'cc') CC.close(); if (scope === 'house') House.close(); if (scope === 'knows') Knows.close(); if (scope === 'who') { closeWho(); return; }
     if (scope === 'settings') closeSettings(); else if (scope === 'chat') closeChat();
     showView('home'); setFocus(defaultFocus());
   },
   media: function () { readNp(); if (scope === 'cc') CC.refresh(); },
+  mediaKey: function (k) { resetIdle(); Yt.mediaKey(k); },
+  paused: function () { Yt.pause(); },
   doorbell: function (name) {
     Sound.reply();
     if (np && np.playing && Native && Native.media && settings.doorbellPause) Native.media('pause');
@@ -4291,6 +4766,7 @@ window.iole = {
   sleepDone: function () {
     if (isKids() && (Home.cfg().bedLights || []).length) Home.load().then(function () { (Home.cfg().bedLights || []).map(Home.byId).filter(Boolean).forEach(function (d) { Home.act(d, 'off').catch(function () {}); }); });
     sleepUntil = 0; clearTimeout(sleepTimer); renderSleepPill(); stopSpeaking();
+    if (scope === 'menu') closeMenu(); if (scope === 'yt') Yt.close();
     if (scope === 'pin') closePin(false); if (scope === 'menu') closeMenu(); if (scope === 'settings') closeSettings(); else if (scope === 'chat') closeChat();
     if (scope !== 'setup') { showView('home'); setTimeout(function () { enterAmbient({ sleep: true }); }, 400); }
   }

@@ -157,8 +157,17 @@ public class MainActivity extends Activity {
 
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                // The launcher never navigates away from its own page.
-                return !HOST.equals(request.getUrl().getHost());
+                // Frames inside the page (YouTube's embedded player) load normally.
+                if (!request.isForMainFrame()) return false;
+                // The launcher never navigates away from its own page. A YouTube link that tries to
+                // (the logo on the embedded player) opens in the YouTube app instead.
+                Uri u = request.getUrl();
+                if (HOST.equals(u.getHost())) return false;
+                String h = u.getHost() == null ? "" : u.getHost();
+                if (h.endsWith("youtube.com") || h.equals("youtu.be")) {
+                    try { startActivity(new Intent(Intent.ACTION_VIEW, u).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); } catch (Exception ignored) {}
+                }
+                return true;
             }
 
             @Override
@@ -213,6 +222,9 @@ public class MainActivity extends Activity {
     protected void onPause() {
         super.onPause();
         if (tts != null) tts.stop();
+        // Leaving Cleo (Home, another app) pauses a video playing in Cleo and lets the screen sleep again.
+        if (pageReady) js("iole.paused && iole.paused()");
+        getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         ui.removeCallbacks(breakRun);
         if (breakMinutes > 0) ui.postDelayed(breakRun, breakMinutes * 60000L);
     }
@@ -244,6 +256,15 @@ public class MainActivity extends Activity {
         if (code == KeyEvent.KEYCODE_BACK || code == KeyEvent.KEYCODE_ESCAPE) {
             // A launcher never closes on Back; the page decides what Back means.
             if (event.getAction() == KeyEvent.ACTION_UP) js("iole.back()");
+            return true;
+        }
+        if (code == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE || code == KeyEvent.KEYCODE_MEDIA_PLAY || code == KeyEvent.KEYCODE_MEDIA_PAUSE
+                || code == KeyEvent.KEYCODE_MEDIA_REWIND || code == KeyEvent.KEYCODE_MEDIA_FAST_FORWARD) {
+            // The remote's media buttons go to the page while Cleo is in front (its own player, or Now playing).
+            if (event.getAction() == KeyEvent.ACTION_UP) {
+                String k = code == KeyEvent.KEYCODE_MEDIA_REWIND ? "rewind" : code == KeyEvent.KEYCODE_MEDIA_FAST_FORWARD ? "forward" : "playpause";
+                js("iole.mediaKey && iole.mediaKey('" + k + "')");
+            }
             return true;
         }
         if (code == KeyEvent.KEYCODE_MENU) {
@@ -583,6 +604,15 @@ public class MainActivity extends Activity {
             if (url == null || !url.matches("(?i)^https?://.+")) return false;
             Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
             return startSafely(i);
+        }
+
+        /** Keeps the screen on while a video plays inside Cleo, so the Fire TV screensaver doesn't cover it. */
+        @JavascriptInterface
+        public void keepAwake(final boolean on) {
+            runOnUiThread(new Runnable() { @Override public void run() {
+                if (on) getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                else getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            } });
         }
 
         @JavascriptInterface
