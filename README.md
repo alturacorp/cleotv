@@ -65,6 +65,14 @@ instructions travel as labelled context at the start of the latest user message.
 - Tonight's picks come from one call per part of the day, cached on the TV. It sends the names of installed streaming apps, the day and the temperature.
 - The TV registers a random device token once with `/auth/register` (no fingerprint) and sends it as `X-Device-Token`, like cleo.ac. An unknown token makes it register again and retry once.
 
+## Splash
+
+Android shows Cleo's star on the dark background the instant the app opens (`res/drawable/splash.xml`, the window
+background). The WebView stays transparent until the page has drawn, then the page's own splash takes over from the
+same star at the same size and place: it shimmers, lifts, and "Cleo" with a greeting ("Good evening, Sam") fades in,
+then everything fades into Home after about 1.6 seconds (0.9 with Reduce motion or on older sticks). Any button skips
+it, and the button that skips does nothing else. It only plays when Cleo starts, not when you come back to it.
+
 ## First run and Settings
 
 - **First-time setup** runs once: welcome, "How things work" (the same points as the web app's consent screen, adapted for a shared TV; agreeing is required before Cleo chats or suggests picks), your name, favourites, town/ambient/clock, and how to get back to Cleo. It resumes where it stopped and can be run again from Settings, Profile.

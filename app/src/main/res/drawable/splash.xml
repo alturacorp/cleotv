@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Shown by Android the moment Cleo opens, before the page has drawn anything. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item><color android:color="#100F0D" /></item>
+    <item android:drawable="@drawable/splash_star" android:gravity="center" android:width="96dp" android:height="96dp" />
 </layer-list>

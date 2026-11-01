@@ -127,7 +127,9 @@ public class MainActivity extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         web = new WebView(this);
-        web.setBackgroundColor(Color.parseColor("#100f0d"));
+        // Transparent until the page has drawn, so Android's splash (the window background) shows through
+        // instead of a blank frame; the page's own splash starts from the same star in the same place.
+        web.setBackgroundColor(Color.TRANSPARENT);
         web.setFocusable(true);
         web.setFocusableInTouchMode(true);
         setContentView(web);
@@ -173,6 +175,7 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 pageReady = true;
+                view.setBackgroundColor(Color.parseColor("#100f0d"));
             }
         });
 
