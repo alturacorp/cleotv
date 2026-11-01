@@ -69,7 +69,9 @@ jobs:
             Built from ${{ github.sha }}.
             cleo-tv.apk: install with Downloader on your Fire TV.
             cleo-phone.apk: the Android Phone link app, for calls and messages on the TV.
+            cleo-mac-helper.py: shows messages from a Mac on the TV (see the top of the file).
           files: |
             cleo-tv.apk
             cleo-phone.apk
+            mac/cleo-mac-helper.py
           make_latest: true
