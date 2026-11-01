@@ -129,6 +129,7 @@ Settings → **Smart home**, then everything appears in Control Center (☰) and
 - **Home Assistant** (recommended): enter its address on the TV (use the IP, like `http://192.168.1.20:8123`), then send a long-lived token from cleo.ac → Settings → Cleo ID → Smart home. Cleo reads rooms from your HA areas.
 - **Philips Hue**: Settings → Smart home → Philips Hue → press the bridge button → Pair.
 - **Shelly**: add each plug's IP address on the TV.
+- **Tuya** (Calex, Smart Life, and other Tuya-based lights and plugs): paste a Tuya cloud project's Access ID and Secret on cleo.ac. The guide is on that page. The lights must be in the **Smart Life** app, not the Calex app, because Tuya only links its own apps. Requests are signed on the TV with the secret (HMAC-SHA256). Tuya's free plan needs renewing every few months on iot.tuya.com.
 - **SmartThings, Govee, LIFX**: paste their keys on cleo.ac. They go through those companies' own servers.
 
 Keys typed on cleo.ac are encrypted in the browser for this TV (the TV publishes its own public key when it's linked to Cleo ID), so Cleo's server can't read them. They're stored only on the TV.

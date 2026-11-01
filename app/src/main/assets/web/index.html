@@ -1951,6 +1951,67 @@ var Home = (function () {
         return hx('PUT', 'https://api.lifx.com/v1/lights/id:' + dv.ref + '/state', a === 'bri' ? { power: v > 0 ? 'on' : 'off', brightness: v / 100 } : { power: a }, this.h());
       }
     },
+    tuya: {
+      // Tuya's cloud (Calex, Smart Life, Lidl, Nedis and many own-brand bulbs and plugs). Every request is signed
+      // with the project's secret (HMAC-SHA256, Tuya's v2 scheme); the secret never leaves the TV.
+      name: 'Tuya', ready: function () { return cfg.tuya && cfg.tuya.id && cfg.tuya.secret; },
+      host: function () { return ({ eu: 'https://openapi.tuyaeu.com', weu: 'https://openapi-weaz.tuyaeu.com', us: 'https://openapi.tuyaus.com', eus: 'https://openapi-ueaz.tuyaus.com', in: 'https://openapi.tuyain.com', cn: 'https://openapi.tuyacn.com' })[cfg.tuya.dc] || 'https://openapi.tuyaeu.com'; },
+      tok: null,
+      hex: function (buf) { return Array.prototype.map.call(new Uint8Array(buf), function (b) { return ('0' + b.toString(16)).slice(-2); }).join(''); },
+      req: function (method, path, body, noToken) {
+        var self = this, te = new TextEncoder(), t = String(Date.now()), nonce = Math.random().toString(36).slice(2, 12), raw = body == null ? '' : JSON.stringify(body);
+        var tokP = noToken ? Promise.resolve('') : self.token();
+        return tokP.then(function (token) {
+          return crypto.subtle.digest('SHA-256', te.encode(raw)).then(function (h) {
+            var q = path.split('?'), url = q[0];
+            if (q[1]) url += '?' + q[1].split('&').sort().join('&');
+            var str = cfg.tuya.id + token + t + nonce + method + '\n' + self.hex(h) + '\n\n' + url;
+            return crypto.subtle.importKey('raw', te.encode(cfg.tuya.secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+              .then(function (k) { return crypto.subtle.sign('HMAC', k, te.encode(str)); })
+              .then(function (sig) {
+                var hd = { client_id: cfg.tuya.id, sign: self.hex(sig).toUpperCase(), t: t, nonce: nonce, sign_method: 'HMAC-SHA256', 'Content-Type': 'application/json' };
+                if (token) hd.access_token = token;
+                return http(method, self.host() + url, raw || null, hd);
+              });
+          });
+        }).then(function (r) {
+          var j = parseJsonLoose(r.text) || {};
+          if (!j.success) {
+            if (j.code === 1010 || j.code === 1011) self.tok = null; // token expired or invalid: get a new one next time
+            var e = new Error(j.msg || ('Tuya ' + (j.code || r.status))); e.auth = j.code === 1004 || j.code === 1106 || j.code === 2009 || j.code === 28841101; throw e;
+          }
+          return j.result;
+        });
+      },
+      token: function () {
+        var self = this;
+        if (self.tok && self.tok.until > Date.now()) return Promise.resolve(self.tok.v);
+        return self.req('GET', '/v1.0/token?grant_type=1', null, true).then(function (r) { self.tok = { v: r.access_token, until: Date.now() + (r.expire_time - 60) * 1000 }; return r.access_token; });
+      },
+      list: function () {
+        var self = this, out = [];
+        function page(last) {
+          return self.req('GET', '/v1.0/iot-01/associated-users/devices?size=50' + (last ? '&last_row_key=' + encodeURIComponent(last) : '')).then(function (r) {
+            (r.devices || []).forEach(function (d) {
+              var st = {}; (d.status || []).forEach(function (x) { st[x.code] = x.value; });
+              var swCode = 'switch_led' in st ? 'switch_led' : 'switch_1' in st ? 'switch_1' : 'switch' in st ? 'switch' : null;
+              if (!swCode) return;
+              var briCode = 'bright_value_v2' in st ? 'bright_value_v2' : 'bright_value' in st ? 'bright_value' : null, briMax = briCode === 'bright_value_v2' ? 1000 : 255, briMin = briCode === 'bright_value_v2' ? 10 : 25;
+              var light = /^(dj|dd|fwd|dc|xdd|fsd|tgq|tgkg)$/.test(d.category) || swCode === 'switch_led';
+              out.push({ id: 'tuya:' + d.id, p: 'tuya', ref: d.id, name: d.name, room: '', kind: light ? 'light' : 'switch', on: d.online === false ? null : !!st[swCode],
+                bri: light && briCode && st[briCode] != null ? pct(st[briCode], briMax) : null, sw: swCode, briCode: briCode, briMax: briMax, briMin: briMin });
+            });
+            return r.has_more && r.last_row_key && out.length < 200 ? page(r.last_row_key) : out;
+          });
+        }
+        return page('');
+      },
+      act: function (dv, a, v) {
+        var cmds = a === 'bri' ? (v > 0 ? [{ code: dv.sw, value: true }].concat(dv.briCode ? [{ code: dv.briCode, value: Math.max(dv.briMin, Math.round(v / 100 * dv.briMax)) }] : []) : [{ code: dv.sw, value: false }])
+          : [{ code: dv.sw, value: a === 'on' }];
+        return this.req('POST', '/v1.0/devices/' + dv.ref + '/commands', { commands: cmds });
+      }
+    },
     shelly: {
       name: 'Shelly', ready: function () { return cfg.shelly && cfg.shelly.length; },
       list: function () {
@@ -2066,7 +2127,7 @@ var Home = (function () {
         var ds = find(target).filter(function (d) { return d.kind !== 'lock' && d.kind !== 'alarm' && d.kind !== 'climate'; });
         if (!ds.length) return null;
         return Promise.all(ds.map(function (d) { return d.kind === 'scene' ? act(d, 'run') : act(d, onoff); })).then(function () {
-          return ds[0].kind === 'scene' ? 'Done, ' + ds[0].name + ' is on.' : 'Done, ' + listNames(ds) + (ds.length === 1 ? ' is ' : ' are ') + onoff + '.';
+          return ds[0].kind === 'scene' ? 'Done, ' + ds[0].name + ' is on.' : 'Done, ' + listNames(ds) + (ds.length === 1 && !/(lights|lamps|blinds|curtains)$/i.test(ds[0].name) ? ' is ' : ' are ') + onoff + '.';
         });
       });
     }
@@ -2121,6 +2182,7 @@ var Home = (function () {
     if (c.st && c.st.token) { cfg.st = { token: String(c.st.token) }; got.push('SmartThings'); }
     if (c.govee && c.govee.key) { cfg.govee = { key: String(c.govee.key) }; got.push('Govee'); }
     if (c.lifx && c.lifx.token) { cfg.lifx = { token: String(c.lifx.token) }; got.push('LIFX'); }
+    if (c.tuya && c.tuya.id && c.tuya.secret) { cfg.tuya = { id: String(c.tuya.id).trim(), secret: String(c.tuya.secret).trim(), dc: String(c.tuya.dc || 'eu') }; P.tuya.tok = null; got.push('Tuya'); }
     if (c.hue && c.hue.ip && c.hue.user) { cfg.hue = { ip: String(c.hue.ip), user: String(c.hue.user) }; got.push('Hue'); }
     if (got.length) { save(); loadedAt = 0; load(true); }
     return got;
@@ -2649,7 +2711,7 @@ var ROW = {
   doorbellPause: { label: 'Pause for the doorbell', type: 'bool', key: 'doorbellPause', hint: 'When the doorbell card appears' },
   hConn: { label: 'Your devices', type: 'action', fmt: function () { var p = Home.providers(); return p.length ? p.map(function (k) { return Home.P[k].name; }).join(', ') : 'Nothing connected'; }, hint: 'OK to see and control everything',
     run: function () { closeSettings(); House.open(); } },
-  hKeys: { label: 'Add keys from your phone', type: 'info', fmt: function () { return 'cleo.ac'; }, hint: 'Settings, Cleo ID, Smart home: Home Assistant, SmartThings, Govee, LIFX',
+  hKeys: { label: 'Add keys from your phone', type: 'info', fmt: function () { return 'cleo.ac'; }, hint: 'Settings, Cleo ID, Smart home: Home Assistant, Tuya (Calex, Smart Life), SmartThings, Govee, LIFX',
     help: 'Long keys are easier to paste on a phone. cleo.ac encrypts them for this TV before sending, so Cleo’s server can’t read them, and they’re kept only on this TV.' },
   hHaUrl: { label: 'Home Assistant address', type: 'text', ph: 'http://192.168.1.20:8123', fmt: function () { var h = Home.cfg().ha; return h && h.url ? h.url.replace(/^https?:\/\//, '') + (h.token ? '' : ' · key needed') : 'Not set'; },
     value: function () { var h = Home.cfg().ha; return h && h.url || 'http://'; },
@@ -2734,7 +2796,7 @@ var ROW = {
     run: function () { closeSettings(); Shared.open(0); } },
   pCards: { label: 'Word cards', type: 'info', fmt: function () { return 'Free Dictionary API'; }, hint: 'Only the word, when you ask what one means' },
   pPhone: { label: 'Calls and messages', type: 'info', fmt: function () { return settings.phoneLink ? 'Shown, not kept' : 'Off'; }, hint: 'From the Android app and Mac helper: encrypted for this TV. From iPhone Shortcuts: passed through Cleo’s server, not stored.' },
-  pSmart: { label: 'Smart home', type: 'info', fmt: function () { return Home.connected() ? 'Your hubs and their makers' : 'Not connected'; }, hint: 'Keys stay on this TV. Home Assistant, Hue and Shelly are reached on your network; SmartThings, Govee and LIFX through their own servers. Chat commands for them stay on the TV.' },
+  pSmart: { label: 'Smart home', type: 'info', fmt: function () { return Home.connected() ? 'Your hubs and their makers' : 'Not connected'; }, hint: 'Keys stay on this TV. Home Assistant, Hue and Shelly are reached on your network; Tuya, SmartThings, Govee and LIFX through their own servers. Chat commands for them stay on the TV.' },
   pUpdate: { label: 'Update check', type: 'info', fmt: function () { return 'GitHub'; }, hint: 'Asks for the latest version; nothing about you is sent' },
   pRem: { label: 'Reminders', type: 'info', fmt: function () { return 'Stay on this TV'; } },
   pWeather2: { label: 'Weather backup', type: 'info', fmt: function () { return settings.location ? 'MET Norway, if Open-Meteo is down' : 'Not set'; }, hint: 'Only the town’s coordinates' },
