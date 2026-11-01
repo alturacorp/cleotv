@@ -53,14 +53,25 @@ Settings → Display & motion → **Performance**: Auto switches to a lighter mo
 The TV posts to `https://iole.graggle9901.workers.dev/lume` (changeable under Settings → Cleo server) in the same shape as the phone app:
 
 ```json
-{ "messages": [{"role": "system", "content": "…TV prompt…"}, {"role": "user", "content": "…"}], "uid": "tv-…", "client": "tv" }
+{ "messages": [{"role": "system", "content": "Cleo TV"}, {"role": "user", "content": "[Context from Cleo TV, for this reply]\n…TV prompt…\n[End of context]\n\n…"}], "uid": "tv-…", "client": "tv" }
 ```
+
+The Worker requires a system message first but doesn't pass it to the model (Cleo Core is server-owned), so the TV's
+instructions travel as labelled context at the start of the latest user message.
 
 - Replies are read from `choices[0].message.content` (or `content[0].text`).
 - `403` with `{"error":"lume_disabled"}` shows "A support agent is handling this conversation."
 - Quick replies come from a second call with `task: "suggestions"`.
 - Tonight's picks come from one call per part of the day, cached on the TV. It sends the names of installed streaming apps, the day and the temperature.
-- The TV doesn't send `X-Device-Token` yet; device registration and consent arrive with Cleo ID.
+- The TV registers a random device token once with `/auth/register` (no fingerprint) and sends it as `X-Device-Token`, like cleo.ac. An unknown token makes it register again and retry once.
+
+## Splash
+
+Android shows Cleo's star on the dark background the instant the app opens (`res/drawable/splash.xml`, the window
+background). The WebView stays transparent until the page has drawn, then the page's own splash takes over from the
+same star at the same size and place: it shimmers, lifts, and "Cleo" with a greeting ("Good evening, Sam") fades in,
+then everything fades into Home after about 1.6 seconds (0.9 with Reduce motion or on older sticks). Any button skips
+it, and the button that skips does nothing else. It only plays when Cleo starts, not when you come back to it.
 
 ## First run and Settings
 
@@ -121,6 +132,30 @@ Cleo checks the GitHub repo that built it for a newer release (a few times a day
 ## "What's on screen?"
 
 Ask Cleo about what's playing: *who's in this?*, *how many episodes are left?*, *is it worth finishing?* Cleo looks the title up in the catalogue (cast, summary and, for series, the episode list) and works out which episode you're on from the session's title or episode name. When you ask, the title and how far in you are go with that message. Chat suggests these questions when you open it while something's playing. It depends on the app publishing a media session with a title; most big apps do.
+
+## Watch (YouTube in Cleo)
+
+A **Watch** tab between Apps and Search. YouTube videos play inside Cleo in YouTube's official embedded player
+(IFrame Player API, `controls=0`); Cleo's own title card, control panel and Up next are drawn around the video,
+never on top of it, as YouTube's [Required Minimum Functionality](https://developers.google.com/youtube/terms/required-minimum-functionality) asks.
+
+- **Rows:** Continue (videos you stopped part-way, per profile), From channels you follow, Popular on YouTube (UK).
+- **Search:** type words, a video link, or `@channel` to find a channel and follow it.
+- **Player:** OK plays or pauses, ◀ ▶ skip 10 seconds, any other button shrinks the picture and shows Cleo's
+  panel below it (progress, ±10 s, speed, captions, Up next, Ask Cleo). After 5 seconds it grows back.
+  At the end, Up next offers the next video from the row you came from. Back goes one step out.
+- **Remote media buttons** (play/pause, rewind, fast-forward) control the player.
+- **Links from your phone** (Send to TV) offer *Play in Cleo* or *Open in the YouTube app*.
+- **Chat:** "play the trailer for Dune", "play lo-fi beats on YouTube".
+- **Lights follow what you watch** and the Phone link's *Do not disturb during films* include Cleo's player.
+  Messages that arrive during a video appear below the picture, never over it; a menu closes the player first.
+- Kids profiles don't see Watch yet. Guest keeps no follows or resume points.
+- The screen stays on while a video plays (`keepAwake`), and leaving Cleo pauses the video.
+
+Search and rows go through the Worker's `/yt/` routes (`cleo-youtube.js`), which hold the free YouTube Data API key
+(secret `YOUTUBE_API_KEY`), cache results in KV, and only answer registered Cleo devices. Quota: 10,000 units a day;
+a search costs 101 and is capped at 40 per device and 80 overall a day; rows cost 1–3 units and are cached for hours.
+Playing a video needs no key, so links from your phone play even before the key is set up.
 
 ## Cleo Home (smart home)
 
