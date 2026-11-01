@@ -13,4 +13,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "LumeTV"
-include ':app'
+include ":app", ":phone"

@@ -30,7 +30,10 @@ final class Overlay {
         return Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(c);
     }
 
-    static void show(final Context ctx, final String title, final String text, final long ms) {
+    static void show(Context ctx, String title, String text, long ms) { show(ctx, title, text, ms, null); }
+
+    /** With a picture (a doorbell camera snapshot) above the text. */
+    static void show(final Context ctx, final String title, final String text, final long ms, final android.graphics.Bitmap picture) {
         final Context c = ctx.getApplicationContext();
         new Handler(Looper.getMainLooper()).post(new Runnable() {
             @Override public void run() {
@@ -55,6 +58,17 @@ final class Overlay {
                     TextView b = new TextView(c);
                     b.setText(text); b.setTextColor(Color.WHITE); b.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
                     b.setMaxWidth((int) (360 * d)); b.setPadding(0, (int) (4 * d), 0, 0);
+                    if (picture != null) {
+                        android.widget.ImageView iv = new android.widget.ImageView(c);
+                        iv.setImageBitmap(picture); iv.setAdjustViewBounds(true);
+                        iv.setMaxWidth((int) (360 * d)); iv.setMaxHeight((int) (203 * d));
+                        iv.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
+                        iv.setClipToOutline(true);
+                        GradientDrawable clip = new GradientDrawable(); clip.setCornerRadius(12 * d); iv.setBackground(clip);
+                        LinearLayout.LayoutParams ip = new LinearLayout.LayoutParams((int) (360 * d), (int) (203 * d));
+                        ip.bottomMargin = (int) (10 * d);
+                        box.addView(iv, ip);
+                    }
                     box.addView(t); box.addView(b);
                     int type = Build.VERSION.SDK_INT >= 26 ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE;
                     WindowManager.LayoutParams lp = new WindowManager.LayoutParams(

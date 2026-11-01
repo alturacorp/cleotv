@@ -392,6 +392,23 @@ body.lite #cc, body.reduce #cc { background: #1b1916; -webkit-backdrop-filter: n
 .clock.focused { border-radius: 99rem; box-shadow: 0 0 0 .25rem var(--ink); padding: 0 1rem; }
 /* Frosted menus where the stick can afford it */
 body:not(.lite):not(.reduce) .modal { background: rgba(28,26,23,.78); -webkit-backdrop-filter: blur(2rem) saturate(1.3); backdrop-filter: blur(2rem) saturate(1.3); }
+/* Cleo Home */
+#housePane { z-index: 34; }
+.hwrap { position: absolute; left: 7rem; right: 7rem; top: 6rem; bottom: 4rem; overflow-y: auto; scrollbar-width: none; }
+.hwrap::-webkit-scrollbar { display: none; }
+.hwrap .kicker { font-size: 1.3rem; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+.hwrap h1 { margin: .8rem 0 0; font: 500 4.4rem/1.1 "Lora", Georgia, serif; } .hsub { margin-top: .8rem; font-size: 1.4rem; color: var(--ink-3); }
+#houseBody { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-gap: 2.6rem; gap: 2.6rem; margin: 3rem 0 2.6rem; align-items: start; }
+.hroom h3 { margin: 0 0 1rem; font-size: 1.3rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.hrow, .ccrem.hdev { display: flex; align-items: center; padding: 1.1rem 1.4rem; border-radius: 1.4rem; margin-bottom: .6rem; background: rgba(255,255,255,.05); transition: background .2s, box-shadow .2s; }
+.hrow .hk, .ccrem.hdev .hk { width: 2.4rem; height: 2.4rem; flex: none; margin-right: 1.2rem; color: var(--ink-3); } .hk svg { width: 100%; height: 100%; }
+.hrow.on .hk, .ccrem.hdev.on .hk { color: #fcd34d; }
+.hrow b { flex: 1; min-width: 0; font-size: 1.6rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hrow i { font-style: normal; font-size: 1.35rem; color: var(--ink-3); margin-left: 1rem; white-space: nowrap; }
+.ccrem.hdev span:not(.hk) { flex: 1; color: var(--ink); } .ccrem.hdev .hv { color: var(--ink-3); font-weight: 500; margin: 0 0 0 1rem; }
+.hrow.focused { background: rgba(255,255,255,.16); box-shadow: inset 0 0 0 .22rem var(--ink); }
+#houseClose { display: inline-flex; }
+.hempty { font-size: 1.7rem; color: var(--ink-3); grid-column: 1 / -1; }
 /* Photos from a phone */
 #photoPane { z-index: 38; background: #000; }
 #photoImg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: opacity .6s var(--ease); }
@@ -736,6 +753,16 @@ body.reduce *, body.reduce *::before, body.reduce *::after { animation: none !im
   </div>
 </section>
 
+<section class="pane" id="housePane" role="dialog" aria-label="Home">
+  <div class="hwrap">
+    <div class="kicker">Home</div>
+    <h1>Your home</h1>
+    <div class="hsub" id="houseSub"></div>
+    <div id="houseBody"></div>
+    <div class="btn" id="houseClose" data-focus data-kind="houseclose">Done</div>
+  </div>
+</section>
+
 <section class="pane" id="photoPane" role="dialog" aria-label="Photos">
   <img id="photoImg" alt="">
   <div id="photoFocus" data-focus data-kind="photo"></div>
@@ -824,7 +851,8 @@ var Store = {
 var defaults = { name: '', worker: DEFAULT_WORKER, location: null, clock24: true, reduceMotion: false, largeText: false, ambientMins: 5, ambientNp: true,
   sort: 'az', picksOn: true, tone: 'balanced', units: 'c', pin: '', consentAt: '',
   perf: 'auto', scene: 'auto', ambClock: 'large', dailyNote: true, seasonal: true, breathe: false, nightDim: 60, morningAt: '',
-  speak: false, speechRate: 'normal', sounds: true, breakNudge: 0, wordOfDay: true };
+  speak: false, speechRate: 'normal', sounds: true, breakNudge: 0, wordOfDay: true, homeStatus: false,
+  phoneLink: true, phonePreview: false, callPause: true, filmDnd: false, doorbellPause: false };
 var settings = Object.assign({}, defaults, Store.get('settings', {}));
 if (!settings.worker) settings.worker = DEFAULT_WORKER;
 settings.bedtime = settings.bedtime || '19:30';
@@ -1552,6 +1580,16 @@ var CC = (function () {
         return '<div><span>' + dayName(d.date, i) + '</span>' + WICONS[wkind(d.code, true)] + '<b>' + d.max + '°</b><small>' + d.min + '°</small></div>';
       }).join('') + '</div><div class="ccsrc">Weather: ' + esc(forecast.source) + '</div></div>';
     }
+    var pl = isKids() ? [] : PhoneLink.recent();
+    if (pl.length) html += '<div class="ccsec"><h3>From your phone</h3>' + pl.slice(0, 4).map(function (n, i) {
+      return '<div class="ccrem" data-focus data-kind="ccmsg" data-i="' + i + '"><b>' + esc(timeStr(new Date(n.at || Date.now()))) + '</b><span>' + esc(PhoneLink.title(n) + (n.kind === 'call' ? '' : ' · ' + PhoneLink.body(n))) + '</span></div>';
+    }).join('') + '</div>';
+    if (!isKids() && Home.connected()) {
+      var hf = Home.favs();
+      html += '<div class="ccsec"><h3>Home</h3>' + hf.map(function (d) {
+        return '<div class="ccrem hdev' + (d.on ? ' on' : '') + '" data-focus data-kind="cchdev" data-id="' + esc(d.id) + '"><span class="hk">' + HICON[d.kind] + '</span><span>' + esc(d.name) + '</span><b class="hv">' + esc(Home.valueText(d)) + '</b></div>';
+      }).join('') + '<div class="ccgrid">' + tile('cchouse', 'All devices', Home.devices().length + ' devices') + tile('ccalloff', 'Lights', 'All off') + '</div></div>';
+    }
     if (!isKids()) {
       var rs = Rem.list();
       html += '<div class="ccsec"><h3>Reminders</h3>' + rs.slice(0, 4).map(function (r) { return '<div class="ccrem" data-focus data-kind="ccrem" data-id="' + esc(r.id) + '"><b>' + esc(Rem.when(r.at)) + '</b><span>' + esc(r.text) + '</span></div>'; }).join('') +
@@ -1562,6 +1600,7 @@ var CC = (function () {
   }
   function open() {
     if (scope !== 'cc') { prev = focused; prevScope = scope; }
+    if (Home.connected() && !isKids()) Home.load().then(function () { refresh(); });
     render(); $('cc').classList.add('on'); $('scrim').classList.add('on'); scope = 'cc';
     setFocus($('ccBody').querySelector('[data-focus]'));
   }
@@ -1580,6 +1619,10 @@ var CC = (function () {
     else if (k === 'ccset') { close(); openSettings(); }
     else if (k === 'ccplay') { mediaAction('playpause'); setTimeout(function () { readNp(); refresh(); }, 400); }
     else if (k === 'ccrem') { var id = el.getAttribute('data-id'), r = Rem.list().filter(function (x) { return x.id === id; })[0]; if (!r) return; openMenu(r.text, Rem.when(r.at), [{ label: 'Remove this reminder', danger: true, fn: function () { Rem.remove(id); toast('Reminder removed'); open(); } }, { label: 'Keep it', fn: function () { open(); } }]); }
+    else if (k === 'ccmsg') { var n = PhoneLink.recent()[+el.getAttribute('data-i')]; if (n) PhoneLink.menu(n); }
+    else if (k === 'cchdev') { homeDeviceAct(Home.byId(el.getAttribute('data-id')), el); }
+    else if (k === 'cchouse') { close(); House.open(); }
+    else if (k === 'ccalloff') { Home.load().then(Home.allLightsOff).then(function (n) { toast(n ? n + (n === 1 ? ' light' : ' lights') + ' off' : 'They’re all off'); refresh(); }); }
     else if (k === 'ccremadd') { close(); openChat(); $('chatInput').value = 'Remind me '; setTimeout(function () { $('chatInput').focus(); }, 50); }
   }
   return { open: open, close: close, act: act, refresh: refresh };
@@ -1746,6 +1789,7 @@ function screenInfo() {
   }).catch(function () { return null; });
   return scr.p;
 }
+function listJoinPlain(a) { return a.length < 2 ? (a[0] || '') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]; }
 function withTimeout(p, ms) { return Promise.race([p, new Promise(function (r) { setTimeout(function () { r(null); }, ms); })]); }
 function screenContext(info) {
   if (!npIsVideo()) return '';
@@ -1778,6 +1822,468 @@ function screenContextFor(text) {
   if (!npIsVideo() || !SCREEN_Q.test(text)) return Promise.resolve('');
   return withTimeout(screenInfo(), 3500).then(function (info) { return screenContext(info); }).catch(function () { return screenContext(null); });
 }
+
+/* ======================= Cleo Home: smart home on the TV =======================
+   Providers: Home Assistant and Philips Hue and Shelly (on your Wi-Fi), SmartThings, Govee and LIFX (their cloud
+   APIs). Keys are kept on this TV only; long ones are sent from cleo.ac encrypted for this TV. Every device becomes
+   { id, p, name, room, kind, on, bri, temp, target, unit } and every action goes back through its provider. */
+var Home = (function () {
+  var cfg = Store.get('home', {}), devices = [], loadedAt = 0, loading = null, last = {};
+  function save() { Store.set('home', cfg); applyDoorbell(); }
+  function isLocal(u) { return /^http:\/\/(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|127\.|[a-z0-9-]+\.local(:|\/|$)|homeassistant(:|\/|$))/i.test(u) || /^https:\/\//i.test(u); }
+  function hx(method, url, body, headers) {
+    if (/^http:/i.test(url) && !isLocal(url)) return Promise.reject(new Error('Plain http is only allowed on your home network'));
+    return http(method, url, body == null ? null : JSON.stringify(body), Object.assign({ 'Content-Type': 'application/json' }, headers || {})).then(function (r) {
+      if (r.status === 401 || r.status === 403) { var e = new Error('auth'); e.auth = true; throw e; }
+      if (r.status === 0 || r.status >= 400) throw new Error('HTTP ' + r.status);
+      try { return JSON.parse(r.text); } catch (e) { return r.text || ''; } // Home Assistant's template API answers in plain text
+    });
+  }
+  function pct(v, max) { return Math.round(Math.max(0, Math.min(100, v / max * 100))); }
+
+  var P = {
+    ha: {
+      name: 'Home Assistant', ready: function () { return cfg.ha && cfg.ha.url && cfg.ha.token; },
+      h: function () { return { Authorization: 'Bearer ' + cfg.ha.token }; }, u: function (p) { return cfg.ha.url.replace(/\/+$/, '') + p; },
+      list: function () {
+        var self = this;
+        return Promise.all([
+          hx('GET', self.u('/api/states'), null, self.h()),
+          hx('POST', self.u('/api/template'), { template: '{% for s in states %}{{ s.entity_id }}|{{ area_name(s.entity_id) or "" }}\n{% endfor %}' }, self.h()).catch(function () { return ''; })
+        ]).then(function (r) {
+          var states = Array.isArray(r[0]) ? r[0] : [], areas = {};
+          String(typeof r[1] === 'string' ? r[1] : '').split('\n').forEach(function (l) { var x = l.split('|'); if (x[1]) areas[x[0]] = x[1]; });
+          var keep = /^(light|switch|fan|climate|lock|cover|scene|script|input_boolean|alarm_control_panel)\./;
+          cfg.haAll = states.filter(function (s) { return /^(binary_sensor|event|camera)\./.test(s.entity_id); }).map(function (s) { return { id: s.entity_id, name: (s.attributes || {}).friendly_name || s.entity_id }; }).slice(0, 200);
+          return states.filter(function (s) { return keep.test(s.entity_id) && s.state !== 'unavailable'; }).map(function (s) {
+            var d = s.entity_id.split('.')[0], a = s.attributes || {};
+            var kind = d === 'light' ? 'light' : d === 'climate' ? 'climate' : d === 'lock' ? 'lock' : d === 'cover' ? 'cover' : d === 'scene' || d === 'script' ? 'scene' : d === 'alarm_control_panel' ? 'alarm' : 'switch';
+            return { id: 'ha:' + s.entity_id, p: 'ha', ref: s.entity_id, name: a.friendly_name || s.entity_id, room: areas[s.entity_id] || '', kind: kind,
+              on: s.state === 'on' || s.state === 'open' || s.state === 'unlocked' || s.state === 'heat' || s.state === 'auto', state: s.state,
+              bri: a.brightness != null ? pct(a.brightness, 255) : null, temp: a.current_temperature, target: a.temperature, unit: '°' };
+          });
+        });
+      },
+      act: function (dv, a, v) {
+        var d = dv.ref.split('.')[0], svc, data = { entity_id: dv.ref };
+        if (a === 'on' || a === 'off') svc = d === 'cover' ? (a === 'on' ? 'open_cover' : 'close_cover') : d === 'lock' ? (a === 'on' ? 'unlock' : 'lock') : 'turn_' + a;
+        if (a === 'bri') { svc = 'turn_on'; data.brightness_pct = v; }
+        if (a === 'target') { svc = 'set_temperature'; data.temperature = v; }
+        if (a === 'run') svc = 'turn_on';
+        if (a === 'arm') svc = v ? 'alarm_arm_away' : 'alarm_disarm';
+        return hx('POST', this.u('/api/services/' + d + '/' + svc), data, this.h());
+      }
+    },
+    hue: {
+      name: 'Philips Hue', ready: function () { return cfg.hue && cfg.hue.ip && cfg.hue.user; },
+      u: function (p) { return 'http://' + cfg.hue.ip + '/api/' + cfg.hue.user + p; },
+      list: function () {
+        var self = this;
+        return Promise.all([hx('GET', self.u('/lights')), hx('GET', self.u('/groups')).catch(function () { return {}; })]).then(function (r) {
+          var room = {};
+          Object.keys(r[1] || {}).forEach(function (g) { var x = r[1][g]; if (x.type === 'Room') (x.lights || []).forEach(function (l) { room[l] = x.name; }); });
+          return Object.keys(r[0] || {}).map(function (k) { var l = r[0][k], st = l.state || {};
+            return { id: 'hue:' + k, p: 'hue', ref: k, name: l.name, room: room[k] || '', kind: 'light', on: !!st.on && st.reachable !== false, bri: st.bri != null ? pct(st.bri, 254) : null }; });
+        });
+      },
+      act: function (dv, a, v) {
+        var body = a === 'bri' ? { on: v > 0, bri: Math.max(1, Math.round(v / 100 * 254)) } : { on: a === 'on' };
+        return hx('PUT', this.u('/lights/' + dv.ref + '/state'), body);
+      }
+    },
+    st: {
+      name: 'SmartThings', ready: function () { return cfg.st && cfg.st.token; },
+      h: function () { return { Authorization: 'Bearer ' + cfg.st.token }; },
+      list: function () {
+        var self = this;
+        return hx('GET', 'https://api.smartthings.com/v1/devices', null, self.h()).then(function (r) {
+          var items = (r.items || []).slice(0, 40);
+          return Promise.all(items.map(function (it) {
+            var caps = []; (it.components || []).forEach(function (c) { (c.capabilities || []).forEach(function (x) { caps.push(x.id); }); });
+            var kind = caps.indexOf('lock') >= 0 ? 'lock' : caps.indexOf('thermostatHeatingSetpoint') >= 0 ? 'climate' : caps.indexOf('switchLevel') >= 0 ? 'light' : caps.indexOf('switch') >= 0 ? 'switch' : null;
+            if (!kind) return null;
+            return hx('GET', 'https://api.smartthings.com/v1/devices/' + it.deviceId + '/status', null, self.h()).then(function (s) {
+              var m = ((s.components || {}).main) || {}, val = function (c, k) { return m[c] && m[c][k] ? m[c][k].value : null; };
+              return { id: 'st:' + it.deviceId, p: 'st', ref: it.deviceId, name: it.label || it.name, room: '', kind: kind,
+                on: val('switch', 'switch') === 'on' || val('lock', 'lock') === 'unlocked', state: val('lock', 'lock'), bri: val('switchLevel', 'level'),
+                temp: val('temperatureMeasurement', 'temperature'), target: val('thermostatHeatingSetpoint', 'heatingSetpoint'), unit: '°' };
+            }).catch(function () { return { id: 'st:' + it.deviceId, p: 'st', ref: it.deviceId, name: it.label || it.name, room: '', kind: kind, on: null }; });
+          })).then(function (list) { return list.filter(Boolean); });
+        });
+      },
+      act: function (dv, a, v) {
+        var cmd = a === 'bri' ? { capability: 'switchLevel', command: 'setLevel', arguments: [v] }
+          : a === 'target' ? { capability: 'thermostatHeatingSetpoint', command: 'setHeatingSetpoint', arguments: [v] }
+          : dv.kind === 'lock' ? { capability: 'lock', command: a === 'on' ? 'unlock' : 'lock' } : { capability: 'switch', command: a };
+        cmd.component = 'main';
+        return hx('POST', 'https://api.smartthings.com/v1/devices/' + dv.ref + '/commands', { commands: [cmd] }, this.h());
+      }
+    },
+    govee: {
+      name: 'Govee', ready: function () { return cfg.govee && cfg.govee.key; },
+      h: function () { return { 'Govee-API-Key': cfg.govee.key }; },
+      list: function () {
+        return hx('GET', 'https://developer-api.govee.com/v1/devices', null, this.h()).then(function (r) {
+          return (((r.data || {}).devices) || []).filter(function (d) { return d.controllable; }).map(function (d) {
+            return { id: 'govee:' + d.device, p: 'govee', ref: d.device, model: d.model, name: d.deviceName, room: '', kind: 'light', on: null, bri: null };
+          });
+        });
+      },
+      act: function (dv, a, v) {
+        var cmd = a === 'bri' ? { name: 'brightness', value: v } : { name: 'turn', value: a };
+        return hx('PUT', 'https://developer-api.govee.com/v1/devices/control', { device: dv.ref, model: dv.model, cmd: cmd }, this.h());
+      }
+    },
+    lifx: {
+      name: 'LIFX', ready: function () { return cfg.lifx && cfg.lifx.token; },
+      h: function () { return { Authorization: 'Bearer ' + cfg.lifx.token }; },
+      list: function () {
+        return hx('GET', 'https://api.lifx.com/v1/lights/all', null, this.h()).then(function (r) {
+          return (Array.isArray(r) ? r : []).map(function (l) { return { id: 'lifx:' + l.id, p: 'lifx', ref: l.id, name: l.label, room: (l.group || {}).name || '', kind: 'light', on: l.power === 'on', bri: Math.round((l.brightness || 0) * 100) }; });
+        });
+      },
+      act: function (dv, a, v) {
+        return hx('PUT', 'https://api.lifx.com/v1/lights/id:' + dv.ref + '/state', a === 'bri' ? { power: v > 0 ? 'on' : 'off', brightness: v / 100 } : { power: a }, this.h());
+      }
+    },
+    shelly: {
+      name: 'Shelly', ready: function () { return cfg.shelly && cfg.shelly.length; },
+      list: function () {
+        return Promise.all(cfg.shelly.map(function (ip) {
+          var base = 'http://' + ip;
+          return hx('GET', base + '/rpc/Switch.GetStatus?id=0').then(function (s) {
+            return hx('GET', base + '/rpc/Shelly.GetDeviceInfo').catch(function () { return {}; }).then(function (info) {
+              return { id: 'shelly:' + ip, p: 'shelly', ref: ip, gen: 2, name: info.name || 'Shelly ' + ip, room: '', kind: 'switch', on: !!s.output };
+            });
+          }).catch(function () {
+            return hx('GET', base + '/status').then(function (s) { return { id: 'shelly:' + ip, p: 'shelly', ref: ip, gen: 1, name: 'Shelly ' + ip, room: '', kind: 'switch', on: !!((s.relays || [])[0] || {}).ison }; }).catch(function () { return null; });
+          });
+        })).then(function (l) { return l.filter(Boolean); });
+      },
+      act: function (dv, a) {
+        return dv.gen === 2 ? hx('GET', 'http://' + dv.ref + '/rpc/Switch.Set?id=0&on=' + (a === 'on')) : hx('GET', 'http://' + dv.ref + '/relay/0?turn=' + a);
+      }
+    }
+  };
+  function providers() { return Object.keys(P).filter(function (k) { return P[k].ready(); }); }
+  function connected() { return providers().length > 0; }
+  function load(force) {
+    if (!connected()) { devices = []; return Promise.resolve([]); }
+    if (!force && Date.now() - loadedAt < 15000) return Promise.resolve(devices);
+    if (loading) return loading;
+    last = {};
+    loading = Promise.all(providers().map(function (k) {
+      return P[k].list().then(function (l) { last[k] = { ok: true, n: l.length }; return l; }).catch(function (e) { last[k] = { ok: false, auth: !!e.auth }; return []; });
+    })).then(function (lists) {
+      devices = [].concat.apply([], lists).sort(function (a, b) { return (a.room || '~').localeCompare(b.room || '~') || a.name.localeCompare(b.name); });
+      loadedAt = Date.now(); loading = null; Store.set('homeCache', devices.slice(0, 120)); return devices;
+    }, function () { loading = null; return devices; });
+    return loading;
+  }
+  function byId(id) { for (var i = 0; i < devices.length; i++) if (devices[i].id === id) return devices[i]; return null; }
+  function act(dv, a, v) {
+    if (!dv || !P[dv.p]) return Promise.reject(new Error('gone'));
+    return P[dv.p].act(dv, a, v).then(function () {
+      if (a === 'on' || a === 'off') dv.on = a === 'on'; if (a === 'bri') { dv.bri = v; dv.on = v > 0; } if (a === 'target') dv.target = v;
+      loadedAt = 0; return dv;
+    });
+  }
+  function favs() { var f = (cfg.favs || []).map(byId).filter(Boolean); return f.length ? f : devices.filter(function (d) { return d.kind === 'light' || d.kind === 'switch' || d.kind === 'climate'; }).slice(0, 6); }
+  function lights() { return devices.filter(function (d) { return d.kind === 'light'; }); }
+  function allLightsOff() { var l = lights().filter(function (d) { return d.on !== false; }); return Promise.all(l.map(function (d) { return act(d, 'off').catch(function () {}); })).then(function () { return l.length; }); }
+  function valueText(d) {
+    if (d.kind === 'climate') return (d.temp != null ? d.temp + d.unit + ' now' : '') + (d.target != null ? ' · set ' + d.target + d.unit : '');
+    if (d.kind === 'lock') return d.state === 'locked' ? 'Locked' : d.state === 'unlocked' ? 'Unlocked' : (d.state || '');
+    if (d.kind === 'cover') return d.on ? 'Open' : 'Closed';
+    if (d.kind === 'scene') return 'Scene';
+    if (d.kind === 'alarm') return d.state ? d.state.replace(/_/g, ' ') : '';
+    if (d.on == null) return '';
+    return d.on ? (d.bri != null ? d.bri + '%' : 'On') : 'Off';
+  }
+
+  /* ---------- names in chat: "the lamp", "living room lights" ---------- */
+  function norm(s) { return String(s || '').toLowerCase().replace(/[’']s\b/g, 's').replace(/[^a-z0-9 ]+/g, ' ').replace(/\b(the|my|a|please|all)\b/g, ' ').replace(/\s+/g, ' ').trim(); }
+  function find(phrase) {
+    var q = norm(phrase).replace(/\blights?\b|\blamps?\b/g, function (m) { return m; }); if (!q) return [];
+    var exact = devices.filter(function (d) { return norm(d.name) === q; }); if (exact.length) return exact;
+    var roomQ = q.replace(/\s*\b(lights?|lamps?)\b\s*/g, ' ').trim();
+    var inRoom = devices.filter(function (d) { return d.room && norm(d.room) === roomQ && (d.kind === 'light' || (/light|lamp/.test(q) ? false : d.kind === 'switch')); });
+    if (inRoom.length && roomQ) return inRoom;
+    var words = q.split(' ').filter(function (w) { return w.length > 1; });
+    var scored = devices.map(function (d) { var n = norm(d.name + ' ' + d.room), s = 0; words.forEach(function (w) { if (n.indexOf(w.replace(/s$/, '')) >= 0) s++; }); return { d: d, s: s }; })
+      .filter(function (x) { return x.s > 0 && x.s >= words.length - (words.length > 2 ? 1 : 0); }).sort(function (a, b) { return b.s - a.s; });
+    return scored.length ? scored.filter(function (x) { return x.s === scored[0].s; }).map(function (x) { return x.d; }).slice(0, 8) : [];
+  }
+  function listNames(ds) { var n = ds.map(function (d) { return d.name; }); return n.length < 2 ? n[0] : n.slice(0, -1).join(', ') + ' and ' + n[n.length - 1]; }
+  // Returns null when it isn't a smart home request; otherwise a Promise of what Cleo says.
+  function command(text) {
+    if (!connected() || isKids()) return null;
+    var t = text.trim().replace(/[.!?]+$/, ''), m;
+    if (/\b(in|after|for)\s+(\d+|half an hour|an hour)\b/i.test(t)) return null; // that's a sleep timer
+    if (/\b(tv|television|telly|sleep timer)\b/i.test(t)) return null;
+    var say = function (s) { return s; };
+    if (/^(?:please\s+)?(?:turn|switch|put)\s+(?:off\s+)?(?:all\s+(?:of\s+)?)?(?:the\s+)?(?:lights|everything)\s*(?:off)?$/i.test(t) && /off/i.test(t) || /^(lights|everything) off$/i.test(t))
+      return load().then(allLightsOff).then(function (n) { return n ? 'Done, ' + n + (n === 1 ? ' light is' : ' lights are') + ' off.' : 'They’re all off already.'; });
+    if ((m = t.match(/^(?:please\s+)?(?:can you\s+)?(?:set|turn)\s+(?:the\s+)?(heating|thermostat|temperature)\s+(?:up\s+|down\s+)?to\s+(\d{1,2}(?:\.5)?)/i)) || (m = t.match(/^make it (warmer|cooler|colder)$/i))) {
+      return load().then(function () {
+        var c = devices.filter(function (d) { return d.kind === 'climate'; })[0];
+        if (!c) return 'I can’t see a thermostat in your smart home.';
+        var v = m[2] ? parseFloat(m[2]) : (c.target || 20) + (/warm/i.test(m[1]) ? 1 : -1);
+        if (v < 7 || v > 30) return 'That’s outside what I’ll set. Try between 7 and 30 degrees.';
+        return act(c, 'target', v).then(function () { return 'Okay, ' + c.name + ' is set to ' + v + '°.'; });
+      });
+    }
+    if ((m = t.match(/^(?:please\s+)?(lock|unlock)\s+(?:the\s+)?(.+)$/i))) {
+      var want = m[1].toLowerCase(), what = m[2];
+      return load().then(function () {
+        var l = find(what).filter(function (d) { return d.kind === 'lock'; })[0];
+        if (!l) return 'I can’t find a lock called “' + what + '”.';
+        // Locks always ask first, on the TV, even when the request came from the phone.
+        return new Promise(function (resolve) {
+          openMenu((want === 'unlock' ? 'Unlock ' : 'Lock ') + l.name + '?', 'Cleo asks before changing a lock.', [
+            { label: want === 'unlock' ? 'Unlock' : 'Lock', danger: want === 'unlock', fn: function () { act(l, want === 'unlock' ? 'on' : 'off').then(function () { resolve(l.name + ' is ' + want + 'ed.'); }, function () { resolve('That didn’t work. ' + l.name + ' didn’t respond.'); }); } },
+            { label: 'Cancel', fn: function () { resolve('Okay, I left ' + l.name + ' alone.'); } }
+          ]);
+        });
+      });
+    }
+    if ((m = t.match(/^(?:please\s+)?(?:can you\s+)?(?:dim|set|turn)\s+(?:the\s+)?(.+?)\s+(?:down\s+|up\s+)?(?:to\s+)?(\d{1,3})\s*(?:%|percent)$/i))) {
+      var level = Math.min(100, parseInt(m[2], 10)), name = m[1];
+      return load().then(function () {
+        var ds = find(name).filter(function (d) { return d.kind === 'light'; });
+        if (!ds.length) return null;
+        return Promise.all(ds.map(function (d) { return act(d, 'bri', level); })).then(function () { return 'Done, ' + listNames(ds) + (ds.length === 1 ? ' is' : ' are') + ' at ' + level + '%.'; });
+      });
+    }
+    if ((m = t.match(/^(?:please\s+)?(?:can you\s+)?(?:turn|switch|put)\s+(on|off)\s+(?:the\s+)?(.+)$/i)) || (m = t.match(/^(?:please\s+)?(?:can you\s+)?(?:turn|switch|put)\s+(?:the\s+)?(.+?)\s+(on|off)$/i))) {
+      var onoff = /^(on|off)$/i.test(m[1]) ? m[1].toLowerCase() : m[2].toLowerCase(), target = /^(on|off)$/i.test(m[1]) ? m[2] : m[1];
+      return load().then(function () {
+        var ds = find(target).filter(function (d) { return d.kind !== 'lock' && d.kind !== 'alarm' && d.kind !== 'climate'; });
+        if (!ds.length) return null;
+        return Promise.all(ds.map(function (d) { return d.kind === 'scene' ? act(d, 'run') : act(d, onoff); })).then(function () {
+          return ds[0].kind === 'scene' ? 'Done, ' + ds[0].name + ' is on.' : 'Done, ' + listNames(ds) + (ds.length === 1 ? ' is ' : ' are ') + onoff + '.';
+        });
+      });
+    }
+    return null;
+  }
+
+  /* ---------- lights that follow what you're watching ---------- */
+  var watchState = 'idle', saved = {};
+  function watchLights() { var ids = (cfg.watch && cfg.watch.lights) || []; return ids.map(byId).filter(Boolean); }
+  function followPlayback() {
+    if (!cfg.watch || !cfg.watch.on || isKids()) return;
+    var now = npIsVideo() && np.playing ? 'playing' : npIsVideo() ? 'paused' : 'idle';
+    if (now === watchState) return;
+    var prev = watchState; watchState = now;
+    load().then(function () {
+      var ls = watchLights(); if (!ls.length) return;
+      if (now === 'playing') {
+        if (prev === 'idle') ls.forEach(function (d) { saved[d.id] = { on: d.on, bri: d.bri }; });
+        ls.forEach(function (d) { if (saved[d.id] && saved[d.id].on !== false) act(d, 'bri', cfg.watch.dim != null ? cfg.watch.dim : 20).catch(function () {}); });
+      } else if (now === 'paused') {
+        ls.forEach(function (d) { if (saved[d.id] && saved[d.id].on !== false) act(d, 'bri', cfg.watch.pause || 50).catch(function () {}); });
+      } else {
+        ls.forEach(function (d) { var s = saved[d.id]; if (!s) return; (s.on === false ? act(d, 'off') : act(d, 'bri', s.bri || 100)).catch(function () {}); });
+        saved = {};
+      }
+    });
+  }
+
+  /* ---------- doorbell (watched natively, so it works over other apps) ---------- */
+  function applyDoorbell() {
+    if (!Native || !Native.setDoorbell) return;
+    var d = cfg.doorbell || {};
+    if (P.ha.ready() && d.entity) Native.setDoorbell(cfg.ha.url.replace(/\/+$/, ''), cfg.ha.token, d.entity, d.camera || '');
+    else Native.setDoorbell('', '', '', '');
+  }
+
+  /* ---------- ambient status ---------- */
+  function statusLine() {
+    if (!settings.homeStatus || !connected() || isKids()) return '';
+    var parts = [];
+    devices.filter(function (d) { return d.kind === 'lock' && d.state === 'unlocked'; }).slice(0, 2).forEach(function (d) { parts.push(d.name + ' unlocked'); });
+    var c = devices.filter(function (d) { return d.kind === 'climate'; })[0]; if (c && c.temp != null) parts.push((c.on ? 'Heating on, ' : 'Indoors ') + c.temp + '°');
+    var on = lights().filter(function (d) { return d.on; }).length; if (on) parts.push(on + (on === 1 ? ' light on' : ' lights on'));
+    return parts.join(' · ');
+  }
+
+  /* ---------- settings arriving from cleo.ac (already decrypted) ---------- */
+  function applyConfig(c) {
+    if (!c || typeof c !== 'object') return [];
+    var got = [];
+    if (c.ha && c.ha.url && c.ha.token) { cfg.ha = { url: String(c.ha.url).replace(/\/+$/, ''), token: String(c.ha.token) }; got.push('Home Assistant'); }
+    if (c.st && c.st.token) { cfg.st = { token: String(c.st.token) }; got.push('SmartThings'); }
+    if (c.govee && c.govee.key) { cfg.govee = { key: String(c.govee.key) }; got.push('Govee'); }
+    if (c.lifx && c.lifx.token) { cfg.lifx = { token: String(c.lifx.token) }; got.push('LIFX'); }
+    if (c.hue && c.hue.ip && c.hue.user) { cfg.hue = { ip: String(c.hue.ip), user: String(c.hue.user) }; got.push('Hue'); }
+    if (got.length) { save(); loadedAt = 0; load(true); }
+    return got;
+  }
+  function forget() { cfg = {}; devices = []; Store.set('home', cfg); Store.set('homeCache', null); applyDoorbell(); }
+
+  /* ---------- Hue pairing on the TV: press the bridge button ---------- */
+  function hueDiscover() {
+    return http('GET', 'https://discovery.meethue.com', null).then(function (r) { var j = JSON.parse(r.text || '[]'); return (j[0] || {}).internalipaddress || null; }).catch(function () { return null; });
+  }
+  function huePair(ip) {
+    return hx('POST', 'http://' + ip + '/api', { devicetype: 'cleo#tv' }).then(function (r) {
+      var x = Array.isArray(r) ? r[0] : r;
+      if (x && x.success && x.success.username) { cfg.hue = { ip: ip, user: x.success.username }; save(); loadedAt = 0; return true; }
+      return false;
+    });
+  }
+
+  devices = Store.get('homeCache', null) || [];
+  setTimeout(applyDoorbell, 3000);
+  return { P: P, cfg: function () { return cfg; }, save: save, load: load, devices: function () { return devices; }, byId: byId, act: act, favs: favs, lights: lights, allLightsOff: allLightsOff,
+    valueText: valueText, command: command, connected: connected, providers: providers, status: function () { return last; }, followPlayback: followPlayback, statusLine: statusLine,
+    applyConfig: applyConfig, forget: forget, hueDiscover: hueDiscover, huePair: huePair, find: find, isLocal: isLocal };
+})();
+
+var btCache = null;
+function btResult(fresh) { if (!Native || !Native.bluetoothCheck) return null; if (!btCache || fresh) { try { btCache = JSON.parse(Native.bluetoothCheck()); } catch (e) { btCache = null; } } return btCache; }
+function androidName(sdk) { return ({ 25: 'Android 7.1', 28: 'Android 9', 30: 'Android 11', 31: 'Android 12', 32: 'Android 12L', 33: 'Android 13', 34: 'Android 14' })[sdk] || 'Android API ' + sdk; }
+function huePairFlow() {
+  if (Home.P.hue.ready()) { openMenu('Philips Hue', 'Connected to ' + Home.cfg().hue.ip, [{ label: 'Disconnect Hue', danger: true, fn: function () { delete Home.cfg().hue; Home.save(); toast('Hue disconnected'); } }, { label: 'Keep it', fn: function () {} }]); return; }
+  toast('Looking for your Hue bridge…');
+  Home.hueDiscover().then(function (ip) {
+    if (!ip) { toast('Couldn’t find a Hue bridge on this network'); return; }
+    var tries = 0;
+    openMenu('Press the button on your Hue bridge', 'The big round one on top. Then choose Pair within 30 seconds.', [
+      { label: 'Pair', fn: function attempt() {
+        Home.huePair(ip).then(function (ok) {
+          if (ok) { toast('Hue connected'); Home.load(true); return; }
+          if (++tries < 3) openMenu('Not yet', 'Press the bridge button, then choose Pair again.', [{ label: 'Pair', fn: attempt }, { label: 'Cancel', fn: function () {} }]);
+          else toast('Hue didn’t answer. Try again from Settings, Smart home.');
+        }, function () { toast('Couldn’t reach the Hue bridge at ' + ip); });
+      } },
+      { label: 'Cancel', fn: function () {} }
+    ]);
+  });
+}
+function doorbellFlow() {
+  if (!Home.P.ha.ready()) { toast('Connect Home Assistant first'); return; }
+  Home.load(true).then(function () {
+    var all = Home.cfg().haAll || [], bells = all.filter(function (e) { return /^(binary_sensor|event)\./.test(e.id) && /door|bell|ring|ding|visitor|chime|press/i.test(e.id + ' ' + e.name); });
+    if (!bells.length) bells = all.filter(function (e) { return /^(binary_sensor|event)\./.test(e.id); }).slice(0, 8);
+    var items = bells.slice(0, 8).map(function (e) { return { label: e.name, fn: function () {
+      var cams = all.filter(function (c) { return /^camera\./.test(c.id); }).slice(0, 7);
+      var setBell = function (cam) { var c = Home.cfg(); c.doorbell = { entity: e.id, camera: cam }; Home.save(); toast('Doorbell set' + (cam ? ', with camera' : '')); };
+      if (!cams.length) { setBell(''); return; }
+      openMenu('Show a camera?', 'A snapshot goes on the card when it rings', cams.map(function (c) { return { label: c.name, fn: function () { setBell(c.id); } }; }).concat([{ label: 'No camera', fn: function () { setBell(''); } }]));
+    } }; });
+    if (Home.cfg().doorbell) items.push({ label: 'Turn the doorbell card off', danger: true, fn: function () { delete Home.cfg().doorbell; Home.save(); toast('Doorbell card off'); } });
+    if (!items.length) { toast('No doorbell found in Home Assistant'); return; }
+    openMenu('Which is your doorbell?', 'From Home Assistant', items);
+  });
+}
+
+/* ---------- the Home pane: every device, by room ---------- */
+var House = (function () {
+  var prev = null, prevScope = 'home';
+  function rowHtml(d) {
+    return '<div class="hrow' + (d.on ? ' on' : '') + '" data-focus data-kind="hdev" data-id="' + esc(d.id) + '"><span class="hk">' + HICON[d.kind] + '</span><b>' + esc(d.name) + '</b><i>' + esc(Home.valueText(d)) + '</i></div>';
+  }
+  function render() {
+    var ds = Home.devices(), rooms = {}, order = [];
+    ds.forEach(function (d) { var r = d.kind === 'scene' ? 'Scenes' : d.room || (Home.P[d.p] ? Home.P[d.p].name : 'Other'); if (!rooms[r]) { rooms[r] = []; order.push(r); } rooms[r].push(d); });
+    $('houseBody').innerHTML = !ds.length ? '<p class="hempty">' + (Home.connected() ? 'Loading your devices…' : 'Nothing connected yet. Settings, Home, to add Home Assistant, Hue and more.') + '</p>'
+      : order.map(function (r) { return '<div class="hroom"><h3>' + esc(r) + '</h3>' + rooms[r].map(rowHtml).join('') + '</div>'; }).join('');
+    $('houseSub').textContent = Home.providers().map(function (k) { var s = Home.status()[k]; return Home.P[k].name + (s && !s.ok ? (s.auth ? ' (key not accepted)' : ' (not reachable)') : ''); }).join(' · ');
+  }
+  function open() {
+    if (scope !== 'house') { prev = focused; prevScope = scope; }
+    $('housePane').classList.add('on'); scope = 'house'; render();
+    setFocus($('houseBody').querySelector('[data-focus]') || $('houseClose'));
+    Home.load(true).then(function () { if (scope !== 'house') return; var id = focused && focused.getAttribute('data-id'); render(); setFocus((id && $('houseBody').querySelector('[data-id="' + id + '"]')) || $('houseBody').querySelector('[data-focus]') || $('houseClose')); });
+  }
+  function close() { $('housePane').classList.remove('on'); scope = prevScope === 'house' ? 'home' : prevScope; if (focused) focused.classList.remove('focused'); setFocus(prev && document.body.contains(prev) ? prev : defaultFocus()); }
+  function refreshRow(d) { var el = document.querySelector('.hrow[data-id="' + d.id + '"]'); if (!el) return; var tmp = document.createElement('div'); tmp.innerHTML = rowHtml(d); var n = tmp.firstChild; if (el === focused) { n.classList.add('focused'); focused = n; } el.parentNode.replaceChild(n, el); }
+  return { open: open, close: close, render: render, refreshRow: refreshRow, isOpen: function () { return scope === 'house'; } };
+})();
+var HICON = {
+  light: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg>',
+  switch: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 3v8M6.3 6.3a8 8 0 1 0 11.4 0"/></svg>',
+  climate: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M14 14.8V5a2 2 0 1 0-4 0v9.8a4 4 0 1 0 4 0z"/></svg>',
+  lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+  cover: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 9h16M4 14h16"/></svg>',
+  scene: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 3l2.4 5.6L20 9.3l-4.4 3.9 1.3 5.8L12 16l-4.9 3 1.3-5.8L4 9.3l5.6-.7z"/></svg>',
+  alarm: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/></svg>'
+};
+function homeDeviceAct(d, el) {
+  if (!d) return;
+  if (d.kind === 'climate') { homeDeviceMenu(d); return; }
+  if (d.kind === 'lock' || d.kind === 'alarm') { homeDeviceMenu(d); return; }
+  var p = d.kind === 'scene' ? Home.act(d, 'run') : Home.act(d, d.on ? 'off' : 'on');
+  p.then(function () { Sound.move(); if (House.isOpen()) House.refreshRow(d); else CC.refresh(); }, function () { toast(d.name + ' didn’t respond'); });
+}
+function homeDeviceMenu(d) {
+  var items = [], cfg = Home.cfg(), favIds = cfg.favs || [], watch = cfg.watch || {}, wl = watch.lights || [], bl = cfg.bedLights || [];
+  var done = function (msg) { return function () { if (msg) toast(msg); if (House.isOpen()) House.refreshRow(d); else CC.refresh(); }; };
+  var fail = function () { toast(d.name + ' didn’t respond'); };
+  if (d.kind === 'light') [10, 25, 50, 75, 100].forEach(function (v) { items.push({ label: 'Brightness ' + v + '%', fn: function () { Home.act(d, 'bri', v).then(done(), fail); } }); });
+  if (d.kind === 'climate') [17, 18, 19, 20, 21, 22].forEach(function (v) { items.push({ label: 'Set to ' + v + '°' + (d.target === v ? ' (now)' : ''), fn: function () { Home.act(d, 'target', v).then(done('Set to ' + v + '°'), fail); } }); });
+  if (d.kind === 'lock') items.push({ label: d.state === 'locked' ? 'Unlock' : 'Lock', danger: d.state === 'locked', fn: function () {
+    openMenu((d.state === 'locked' ? 'Unlock ' : 'Lock ') + d.name + '?', 'Cleo always asks before changing a lock.', [
+      { label: d.state === 'locked' ? 'Unlock' : 'Lock', danger: true, fn: function () { var want = d.state === 'locked' ? 'on' : 'off'; Home.act(d, want).then(function () { d.state = want === 'on' ? 'unlocked' : 'locked'; done(d.name + ' ' + d.state)(); }, fail); } },
+      { label: 'Cancel', fn: function () {} }]); } });
+  if (d.kind === 'alarm') items.push({ label: /disarm/.test(d.state || '') ? 'Arm (away)' : 'Disarm', danger: true, fn: function () {
+    openMenu('Change the alarm?', d.name, [{ label: 'Yes', danger: true, fn: function () { Home.act(d, 'arm', /disarm/.test(d.state || '')).then(done('Done'), fail); } }, { label: 'Cancel', fn: function () {} }]); } });
+  items.push({ label: favIds.indexOf(d.id) >= 0 ? 'Remove from Control Center' : 'Show in Control Center', fn: function () { var i = favIds.indexOf(d.id); if (i >= 0) favIds.splice(i, 1); else favIds.push(d.id); cfg.favs = favIds.slice(0, 8); Home.save(); done()(); } });
+  if (d.kind === 'light') {
+    items.push({ label: wl.indexOf(d.id) >= 0 ? 'Stop dimming for films' : 'Dim for films', fn: function () { var i = wl.indexOf(d.id); if (i >= 0) wl.splice(i, 1); else wl.push(d.id); cfg.watch = Object.assign({ on: true, dim: 20, pause: 50 }, watch, { lights: wl }); Home.save(); toast(i >= 0 ? 'Won’t dim' : 'Dims when a film starts'); } });
+    if (kidsProfiles().length) items.push({ label: bl.indexOf(d.id) >= 0 ? 'Not a kids’ bedtime light' : 'Turn off at kids’ bedtime', fn: function () { var i = bl.indexOf(d.id); if (i >= 0) bl.splice(i, 1); else bl.push(d.id); cfg.bedLights = bl; Home.save(); toast(i >= 0 ? 'Removed' : 'Turns off at bedtime'); } });
+  }
+  openMenu(d.name, Home.valueText(d) + (d.room ? ' · ' + d.room : ''), items);
+}
+
+/* ======================= Phone link: calls and messages on the TV =======================
+   From the iPhone (a Shortcuts automation), the Android companion app or the Mac helper, through Cleo ID's relay.
+   The Android app and Mac helper encrypt for this TV; nothing is kept here except the last few, in memory. */
+var PhoneLink = (function () {
+  var recent = [], held = [], pausedForCall = false;
+  function receive(m) {
+    var n = m;
+    if (m.env) {
+      var j = parseJsonLoose(Native && Native.openEnvelope ? Native.openEnvelope(JSON.stringify(m.env)) : '');
+      if (!j) return;
+      n = Object.assign({}, j, { src: m.src, srcKind: m.srcKind, at: m.at });
+    }
+    if (!settings.phoneLink || isKids()) return; // never on a kids profile
+    n.from = String(n.from || 'Someone').slice(0, 60); n.text = String(n.text || '').slice(0, 300);
+    if (n.kind === 'callend') { if (pausedForCall) { pausedForCall = false; } return; }
+    if (n.kind !== 'call' && settings.filmDnd && npIsVideo() && np.playing) { held.push(n); return; } // calls always come through
+    show(n);
+  }
+  function title(n) { return n.kind === 'call' ? n.from + ' is calling' : n.from + (n.app && !/messages|sms/i.test(n.app) ? ' · ' + n.app : ''); }
+  function body(n) { return n.kind === 'call' ? (n.app && !/phone|dialer|telecom/i.test(n.app) ? n.app + ' call' : 'Incoming call') : settings.phonePreview && n.text ? n.text : 'New message'; }
+  function show(n) {
+    recent.unshift(n); recent = recent.slice(0, 8);
+    if (n.kind === 'call' && settings.callPause && np && np.playing && Native && Native.media) { Native.media('pause'); pausedForCall = true; }
+    if (Native && Native.showOverlay) Native.showOverlay(title(n), body(n)); else toast(title(n) + ' · ' + body(n));
+    Sound.reply();
+    if (typeof CC !== 'undefined') CC.refresh();
+  }
+  function flush() { if (!held.length || (npIsVideo() && np.playing)) return; var h = held.splice(0); if (h.length === 1) show(h[0]); else { h.forEach(function (n) { recent.unshift(n); }); recent = recent.slice(0, 8); if (Native && Native.showOverlay) Native.showOverlay(h.length + ' messages', 'While you were watching: ' + listJoinPlain(h.map(function (n) { return n.from; }).filter(function (v, i, a) { return a.indexOf(v) === i; }).slice(0, 3))); else toast(h.length + ' messages while you were watching'); } }
+  var QUICK = ['Watching something, I’ll call you back', 'On my way', 'Yes', 'No', 'Can’t talk right now'];
+  function canReply(n) { return n.srcKind === 'android' && n.pk && n.key; }
+  function reply(n, text) {
+    var env = Native && Native.sealFor ? parseJsonLoose(Native.sealFor(n.pk, JSON.stringify({ key: n.key, text: text, action: n.kind === 'call' ? 'decline' : 'reply' }))) : null;
+    if (!env) { toast('Couldn’t send that'); return; }
+    http('POST', settings.worker + '/id/notify/reply', JSON.stringify({ src: n.src, env: env }), Cid.headers()).then(function (r) { toast(r.status === 200 ? 'Sent from your phone' : 'Couldn’t send that'); }, function () { toast('Couldn’t send that'); });
+  }
+  function menu(n) {
+    var items = [];
+    if (canReply(n)) {
+      if (n.kind === 'call') items.push({ label: 'Decline and text “Can’t talk right now”', fn: function () { reply(n, 'Can’t talk right now'); } });
+      else QUICK.forEach(function (q) { items.push({ label: 'Reply “' + q + '”', fn: function () { reply(n, q); } }); });
+    }
+    items.push({ label: 'Dismiss', fn: function () { recent = recent.filter(function (x) { return x !== n; }); CC.refresh(); } });
+    openMenu(title(n), body(n), items);
+  }
+  return { receive: receive, flush: flush, recent: function () { return recent; }, menu: menu, title: title, body: body };
+})();
 
 /* ======================= Hero + Tonight picks ======================= */
 function periodKey() { var d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate() + ':' + partOfDay(d.getHours()); }
@@ -1872,7 +2378,7 @@ function openPick(i) {
 var focused = null, scope = 'home', view = 'home', lastFocus = {};
 function scopeRoot() {
   if (scope === 'menu') return $('menu'); if (scope === 'settings') return $('settingsPane'); if (scope === 'chat') return $('chat');
-  if (scope === 'pin') return $('pinPane'); if (scope === 'link') return $('linkPane'); if (scope === 'who') return $('whoPane'); if (scope === 'journal') return $('journalPane'); if (scope === 'title') return $('titlePane'); if (scope === 'photo') return $('photoPane'); if (scope === 'cc') return $('cc'); if (scope === 'setup') return setupStepEl(setupState.step);
+  if (scope === 'pin') return $('pinPane'); if (scope === 'link') return $('linkPane'); if (scope === 'who') return $('whoPane'); if (scope === 'journal') return $('journalPane'); if (scope === 'title') return $('titlePane'); if (scope === 'photo') return $('photoPane'); if (scope === 'cc') return $('cc'); if (scope === 'house') return $('housePane'); if (scope === 'setup') return setupStepEl(setupState.step);
   return null;
 }
 function focusables() {
@@ -1893,7 +2399,7 @@ function setFocus(el) {
   focused = el; el.classList.add('focused');
   if (!scopeRoot()) { lastFocus[view] = el; scrollView(el); setBackdrop(view === 'home' || view === 'search' ? el.getAttribute('data-bg') : null); }
   else if (el.classList.contains('sec')) showSection(el.getAttribute('data-sec'));
-  else if (scope === 'cc' && el.scrollIntoView) { try { el.scrollIntoView({ block: 'nearest', behavior: settings.reduceMotion ? 'auto' : 'smooth' }); } catch (e) {} }
+  else if ((scope === 'cc' || scope === 'house') && el.scrollIntoView) { try { el.scrollIntoView({ block: 'nearest', behavior: settings.reduceMotion ? 'auto' : 'smooth' }); } catch (e) {} }
   else if (el.parentNode && el.parentNode.id === 'rows') scrollBox($('rows'), $('rowsBox'), el);
   else if (el.classList.contains('fav')) scrollBox($('favGrid'), $('favBox'), el);
 }
@@ -1959,6 +2465,7 @@ function activate(el) {
   if (scope === 'title') { titleActivate(el); return; }
   if (scope === 'photo') { Shared.toggleShow(); return; }
   if (scope === 'cc') { CC.act(el); return; }
+  if (scope === 'house') { if (el.id === 'houseClose') House.close(); else homeDeviceAct(Home.byId(el.getAttribute('data-id')), el); return; }
   if (el.getAttribute('data-kind') === 'cc') { CC.open(); return; }
   if (k === 'sinput') { $('searchInput').focus(); return; }
   if (k === 'srecent') { $('searchInput').value = el.textContent; searchJump = true; runSearch(el.textContent, true); return; }
@@ -1989,7 +2496,8 @@ function activate(el) {
 }
 function options(el) {
   if (scope === 'photo') { Shared.menu(); return; }
-  if (scope === 'cc') { CC.close(); return; }
+  if (scope === 'cc') { if (el && el.getAttribute('data-kind') === 'cchdev') homeDeviceMenu(Home.byId(el.getAttribute('data-id'))); else CC.close(); return; }
+  if (scope === 'house') { if (el && el.getAttribute('data-kind') === 'hdev') homeDeviceMenu(Home.byId(el.getAttribute('data-id'))); return; }
   if (scope === 'home' && (!el || !/^(app|cw|rate|pick|cleo)$/.test(el.getAttribute('data-kind') || ''))) { CC.open(); return; } // ☰ anywhere else opens Control Center
   if (el && el.getAttribute('data-kind') === 'srow') { el.classList.toggle('showhelp'); return; }
   if (!el || scopeRoot()) return;
@@ -2125,6 +2633,46 @@ var ROW = {
   ambientMins: { label: 'Start ambient after', type: 'cycle', key: 'ambientMins', values: [0, 2, 5, 10, 15], fmt: function (v) { return v ? v + ' minutes' : 'Never'; },
     help: 'Ambient mode shows a big clock and the star when the TV is idle. Any button wakes it.' },
   ambientNp: { label: 'Show what’s playing', type: 'bool', key: 'ambientNp' },
+  phoneLink: { label: 'Calls and messages on the TV', type: 'bool', key: 'phoneLink', hint: 'From your phone, set up on cleo.ac, Settings, Cleo ID, Phone link',
+    help: 'Shows a small card over whatever you’re watching. Never on a kids profile.' },
+  phonePreview: { label: 'Show message text', type: 'bool', key: 'phonePreview', hint: 'Off: just “Message from Mum”. Others may be watching.' },
+  callPause: { label: 'Pause for calls', type: 'bool', key: 'callPause', hint: 'Pauses what’s playing when a call comes in' },
+  filmDnd: { label: 'Do not disturb during films', type: 'bool', key: 'filmDnd', hint: 'Messages wait until you pause; calls still come through' },
+  btCheck: { label: 'iPhone calls over Bluetooth', type: 'action', fmt: function () { var r = btResult(); return !r ? 'Check this stick' : r.possible ? 'Possible on this stick' : 'Not on this stick'; },
+    help: 'iPhones only share calls with Bluetooth accessories (like watches). That needs a newer Android than most Fire TV sticks have; this checks yours. Messages from an iPhone work either way, with Shortcuts.',
+    run: function (el) { var r = btResult(true); if (r) el.classList.add('showhelp'); toast(!r ? 'Only works on the TV' : r.possible ? 'This stick could do it' : !r.ble ? 'This stick has no Bluetooth Low Energy' : !r.advertise ? 'This stick’s Bluetooth can’t act as an accessory' : 'Needs Android 12; this stick has ' + androidName(r.sdk)); } },
+  doorbellPause: { label: 'Pause for the doorbell', type: 'bool', key: 'doorbellPause', hint: 'When the doorbell card appears' },
+  hConn: { label: 'Your devices', type: 'action', fmt: function () { var p = Home.providers(); return p.length ? p.map(function (k) { return Home.P[k].name; }).join(', ') : 'Nothing connected'; }, hint: 'OK to see and control everything',
+    run: function () { closeSettings(); House.open(); } },
+  hKeys: { label: 'Add keys from your phone', type: 'info', fmt: function () { return 'cleo.ac'; }, hint: 'Settings, Cleo ID, Smart home: Home Assistant, SmartThings, Govee, LIFX',
+    help: 'Long keys are easier to paste on a phone. cleo.ac encrypts them for this TV before sending, so Cleo’s server can’t read them, and they’re kept only on this TV.' },
+  hHaUrl: { label: 'Home Assistant address', type: 'text', ph: 'http://192.168.1.20:8123', fmt: function () { var h = Home.cfg().ha; return h && h.url ? h.url.replace(/^https?:\/\//, '') + (h.token ? '' : ' · key needed') : 'Not set'; },
+    value: function () { var h = Home.cfg().ha; return h && h.url || 'http://'; },
+    help: 'Use the IP address shown in Home Assistant, Settings, System, Network. Fire TV often can’t find “homeassistant.local”.',
+    commit: function (v, el) {
+      var c = Home.cfg(); v = v.trim().replace(/\/+$/, '');
+      if (!v || v === 'http:') { if (c.ha) { delete c.ha; Home.save(); } setFocus(refreshRowEl(el)); return; }
+      if (!/^https?:\/\//.test(v)) v = 'http://' + v;
+      if (!Home.isLocal(v)) { toast('Use your home network address, or an https:// one'); setFocus(refreshRowEl(el)); return; }
+      c.ha = { url: v, token: (c.ha && c.ha.token) || '' }; Home.save();
+      if (!c.ha.token) toast('Now add its key from cleo.ac, Settings, Cleo ID, Smart home');
+      setFocus(refreshRowEl(el));
+    } },
+  hHue: { label: 'Philips Hue', type: 'action', fmt: function () { return Home.P.hue.ready() ? 'Connected' : 'Pair'; }, hint: 'Press the button on the bridge when asked', run: function () { huePairFlow(); } },
+  hShelly: { label: 'Add a Shelly', type: 'text', ph: '192.168.1.40', fmt: function () { var n = (Home.cfg().shelly || []).length; return n ? n + ' added' : ''; }, value: function () { return ''; },
+    help: 'Type the plug’s IP address from the Shelly app. Leave it empty and press OK to remove them all.',
+    commit: function (v, el) { var c = Home.cfg(); v = v.trim(); if (!v) c.shelly = []; else if (/^\d{1,3}(\.\d{1,3}){3}$/.test(v)) { c.shelly = (c.shelly || []).filter(function (x) { return x !== v; }).concat([v]); toast('Shelly added'); } else toast('That isn’t an IP address'); Home.save(); setFocus(refreshRowEl(el)); } },
+  hWatch: { label: 'Lights follow what you watch', type: 'action', fmt: function () { var w = Home.cfg().watch; return w && w.on ? ((w.lights || []).length ? (w.lights.length + (w.lights.length === 1 ? ' light' : ' lights')) : 'Choose lights') : 'Off'; },
+    hint: 'Dim when a film starts, brighter when you pause, back after',
+    help: 'Pick the lights in Your devices: ☰ on a light, Dim for films. Works with films and episodes, not music.',
+    run: function () { var c = Home.cfg(); c.watch = Object.assign({ dim: 20, pause: 50, lights: [] }, c.watch || {}); c.watch.on = !c.watch.on; Home.save(); if (c.watch.on && !c.watch.lights.length) toast('Now choose lights: Your devices, ☰ on a light'); } },
+  hDim: { label: 'Film brightness', type: 'action', fmt: function () { var w = Home.cfg().watch || {}; return (w.dim != null ? w.dim : 20) + '%'; },
+    run: function () { var c = Home.cfg(), vals = [0, 10, 20, 30, 40]; c.watch = Object.assign({ on: false, pause: 50, lights: [] }, c.watch || {}); var i = vals.indexOf(c.watch.dim); c.watch.dim = vals[(i + 1) % vals.length]; Home.save(); } },
+  hDoorbell: { label: 'Doorbell', type: 'action', fmt: function () { var d = Home.cfg().doorbell; return d && d.entity ? d.entity.split('.')[1].replace(/_/g, ' ') : (Home.P.ha.ready() ? 'Choose' : 'Needs Home Assistant'); },
+    hint: 'A card with the camera over whatever is playing', run: function () { doorbellFlow(); } },
+  homeStatus: { label: 'Home on the ambient screen', type: 'bool', key: 'homeStatus', hint: 'Unlocked doors, heating, lights left on' },
+  hForget: { label: 'Disconnect smart home', type: 'action', danger: true, fmt: function () { return ''; }, help: 'Removes every key and setting for smart home from this TV.',
+    run: function () { openMenu('Disconnect smart home?', 'All keys and choices are removed from this TV.', [{ label: 'Cancel', fn: function () {} }, { label: 'Disconnect', danger: true, fn: function () { Home.forget(); toast('Smart home disconnected'); } }]); } },
   wordOfDay: { label: 'Word of the day', type: 'bool', key: 'wordOfDay', hint: 'A lovely word under the clock, from a list on the TV' },
   scene: { label: 'Scene', type: 'cycle', key: 'scene', values: ['auto', 'sky', 'aurora', 'weather', 'morning', 'memories'],
     fmt: function (v) { return { auto: 'Auto', sky: 'Night sky', aurora: 'Aurora', weather: 'Weather', morning: 'Morning', memories: 'Memories (your photos)' }[v]; },
@@ -2180,6 +2728,8 @@ var ROW = {
     help: 'Photos you send are passed through ' + BRAND + '’s server and deleted there as soon as this TV has them (after a day at most). They stay on this TV for 30 days, or until you remove them. They also appear in the Memories ambient scene.',
     run: function () { closeSettings(); Shared.open(0); } },
   pCards: { label: 'Word cards', type: 'info', fmt: function () { return 'Free Dictionary API'; }, hint: 'Only the word, when you ask what one means' },
+  pPhone: { label: 'Calls and messages', type: 'info', fmt: function () { return settings.phoneLink ? 'Shown, not kept' : 'Off'; }, hint: 'From the Android app and Mac helper: encrypted for this TV. From iPhone Shortcuts: passed through Cleo’s server, not stored.' },
+  pSmart: { label: 'Smart home', type: 'info', fmt: function () { return Home.connected() ? 'Your hubs and their makers' : 'Not connected'; }, hint: 'Keys stay on this TV. Home Assistant, Hue and Shelly are reached on your network; SmartThings, Govee and LIFX through their own servers. Chat commands for them stay on the TV.' },
   pUpdate: { label: 'Update check', type: 'info', fmt: function () { return 'GitHub'; }, hint: 'Asks for the latest version; nothing about you is sent' },
   pRem: { label: 'Reminders', type: 'info', fmt: function () { return 'Stay on this TV'; } },
   pWeather2: { label: 'Weather backup', type: 'info', fmt: function () { return settings.location ? 'MET Norway, if Open-Meteo is down' : 'Not set'; }, hint: 'Only the town’s coordinates' },
@@ -2211,9 +2761,11 @@ var SECTIONS = [
   { id: 'home', name: 'Home screen', blurb: 'What you see when you open ' + BRAND + '.', rows: ['homeKey', 'sleep', 'picksOn', 'refresh', 'journal', 'journalView', 'clearJournal', 'sort', 'hidden', 'clock24'] },
   { id: 'ambient', name: 'Ambient', blurb: 'What the TV shows when nobody’s using it.', rows: ['ambPreview', 'scene', 'ambientMins', 'ambClock', 'ambientNp', 'dailyNote', 'wordOfDay', 'seasonal', 'morningAt', 'breathe', 'nightDim', 'burnin'] },
   { id: 'cleo', name: BRAND, blurb: 'How ' + BRAND + ' talks to you on this TV.', rows: ['tone', 'speak', 'speechRate', 'breakNudge', 'privateTv', 'clearChat'] },
+  { id: 'smarthome', name: 'Smart home', blurb: 'Lights, heating and the doorbell, from the TV.', rows: ['hConn', 'hKeys', 'hHaUrl', 'hHue', 'hShelly', 'hWatch', 'hDim', 'hDoorbell', 'doorbellPause', 'homeStatus', 'hForget'] },
+  { id: 'phone', name: 'Phone link', blurb: 'Calls and messages from your phone, on the TV.', rows: ['phoneLink', 'phonePreview', 'callPause', 'filmDnd', 'btCheck'] },
   { id: 'weather', name: 'Weather', blurb: 'For the clock, ambient mode and picks.', rows: ['location', 'units'] },
   { id: 'display', name: 'Display & motion', blurb: 'Easier on the eyes, and on the stick.', rows: ['reduceMotion', 'largeText', 'perf', 'sounds'] },
-  { id: 'privacy', name: 'Privacy', blurb: 'What leaves this TV, and where it goes.', rows: ['pChats', 'pApps', 'pNote', 'pTown', 'pSearch', 'pCards', 'pShare', 'pUpdate', 'pRem', 'pWeather2', 'pLocal', 'pWatch', 'pHome', 'pVoice', 'pCid', 'pAgreed', 'pTerms'] },
+  { id: 'privacy', name: 'Privacy', blurb: 'What leaves this TV, and where it goes.', rows: ['pChats', 'pApps', 'pNote', 'pTown', 'pSearch', 'pCards', 'pShare', 'pPhone', 'pSmart', 'pUpdate', 'pRem', 'pWeather2', 'pLocal', 'pWatch', 'pHome', 'pVoice', 'pCid', 'pAgreed', 'pTerms'] },
   { id: 'about', name: 'About', blurb: 'Version, help and the advanced bits.', rows: ['version', 'update', 'device', 'media', 'firetv', 'worker', 'reset'] }
 ];
 function rowValueHtml(id) {
@@ -2439,6 +2991,7 @@ function renderNp() {
 function readNp() {
   if (Native && Native.getNowPlaying) { try { np = JSON.parse(Native.getNowPlaying()); } catch (e) { np = null; } }
   renderNp(); var before = cwSig(); noteNp(); if (cwSig() !== before) refreshPicks();
+  Home.followPlayback(); PhoneLink.flush();
 }
 function cwSig() { return cwShown().map(function (c) { return c.key + Math.round(c.pos / c.dur * 50); }).join() + '|' + (askNext() ? askNext().key : ''); }
 function refreshPicks() {
@@ -2639,14 +3192,29 @@ var Cid = (function () {
         if (m.type === 'text' && m.text) queue.push(m);
         else if (m.type === 'url' && m.url) offerLink(m);
         else if (m.type === 'photo' && m.id) Shared.receive(m);
+        else if (m.type === 'config' && m.env) receiveConfig(m);
+        else if (m.type === 'notify') PhoneLink.receive(m);
       });
       if (queue.length && scope !== 'chat' && (scope === 'home' || Amb.isOn()) && !isKids() && settings.consentAt) { if (Amb.isOn()) exitAmbient(); openChat(); }
       drain();
       if (r.name && acct().name !== r.name) { var a = acct(); a.name = r.name; Store.set('cid', a); renderSide(); }
     }).catch(function () {});
   }
-  // While linked, the TV checks for things sent from the phone: every 2.5 s in chat, every 6 s otherwise, and not while another app is in front.
-  function startRelay(fast) { stopRelay(); if (!acct()) return; relayOnce(); relayTimer = setInterval(function () { if (document.hidden) return; drain(); if (!thinking) relayOnce(); }, fast === false ? 6000 : 2500); }
+  // While linked, the TV checks for things sent from the phone: every 2.5 s in chat, every 4 s otherwise, also behind other apps so calls show over them.
+  function receiveConfig(m) {
+    var txt = Native && Native.openEnvelope ? Native.openEnvelope(JSON.stringify(m.env)) : '', c = parseJsonLoose(txt);
+    if (!c) { toast('Settings from ' + (m.from || 'your phone') + ' couldn’t be opened on this TV'); return; }
+    var got = Home.applyConfig(c.home);
+    if (got.length) { toast(listJoinPlain(got) + ' connected'); Sound.reply(); }
+  }
+  // Publishes this TV's public key once, so phones and cleo.ac can encrypt things only it can read.
+  function sendKey() {
+    var k = Native && Native.deviceKey ? Native.deviceKey() : '';
+    if (!k || !acct() || Store.get('keySent', '') === k + acct().id) return;
+    call('tv/key', { key: k }).then(function () { Store.set('keySent', k + acct().id); }).catch(function () {});
+  }
+  function startRelay(fast) {
+    sendKey(); stopRelay(); if (!acct()) return; relayOnce(); relayTimer = setInterval(function () { drain(); if (!thinking) relayOnce(); }, fast === false ? 4000 : 2500); }
   function stopRelay() { clearInterval(relayTimer); relayTimer = 0; }
   function renderSide() {
     var a = acct(), el = $('chatSideCard'); if (!el) return;
@@ -2766,11 +3334,27 @@ function loadChips() {
     if (scope === 'chat' && !thinking) renderChips(lastChips);
   }).catch(function () {});
 }
-function sendChat(text) {
+function sendChat(text, notHome) {
   text = (text || '').trim();
   if (!text || thinking) return;
   if (!settings.consentAt) { openSetup(1); return; }
   stopSpeaking();
+  var hc = notHome ? null : Home.command(text);
+  if (hc) {
+    // Smart home requests are handled on the TV and never sent to Cleo's servers.
+    $('chatInput').value = ''; $('chatInput').blur();
+    chatLog.push({ role: 'user', text: text, t: Date.now() });
+    thinking = true; document.body.classList.add('thinking'); renderChat(); renderChips([]);
+    hc.then(function (said) { return said; }, function () { return 'Your smart home didn’t answer. Check it’s on and connected.'; }).then(function (said) {
+      thinking = false; document.body.classList.remove('thinking');
+      if (said == null) { chatLog.pop(); sendChat(text, true); return; }
+      chatLog.push({ role: 'cleo', text: said, t: Date.now() });
+      PS.set('chat', chatLog.slice(-60)); renderChat(); Sound.reply();
+      if (settings.speak) speakText(said);
+      if (scope === 'chat') setFocus($('composer'));
+    });
+    return;
+  }
   var rc = remindCommand(text);
   if (rc) {
     $('chatInput').value = ''; $('chatInput').blur();
@@ -3121,6 +3705,7 @@ var Amb = (function () {
       cd.style.display = 'block';
     } else cd.style.display = 'none';
     var note = Store.get('note', null);
+    var hs = Home.statusLine(); if (hs && !sleepMode) $('ambSub').textContent += ' · ' + hs;
     var wd = wordOfDay(d); $('ambWord').innerHTML = settings.wordOfDay && !sleepMode ? 'Word of the day<b>' + esc(wd.word) + '</b>' + esc(wd.def) : '';
     $('ambNote').textContent = sleepMode ? 'Paused for the night. Goodnight' + (profName() ? ', ' + profName() : '') + '.' : (settings.dailyNote && note && note.day === dayKey() ? note.text : '');
     $('ambNp').style.display = settings.ambientNp ? '' : 'none';
@@ -3252,6 +3837,7 @@ function back() {
   if (scope === 'title') return closeTitle();
   if (scope === 'photo') return Shared.close();
   if (scope === 'cc') return CC.close();
+  if (scope === 'house') return House.close();
   if (view === 'search' && scope === 'home') { showView('home'); setFocus(defaultFocus()); return; }
   if (scope === 'setup') { if (setupState.step > 0) goStep(setupState.step - 1); return; }
   if (scope === 'settings') { if (focused && focused.classList.contains('row')) { setFocus(document.querySelector('.sec[data-sec="' + curSec + '"]')); return; } return closeSettings(); }
@@ -3323,15 +3909,21 @@ window.iole = {
   home: function () {
     Amb.exit(); if (moveMode) endMove();
     if (scope === 'setup' || scope === 'link') return;
-    if (scope === 'pin') closePin(false); if (scope === 'menu') closeMenu(); if (scope === 'journal') closeJournal(); if (scope === 'title') closeTitle(); if (scope === 'photo') Shared.close(); if (scope === 'cc') CC.close(); if (scope === 'who') { closeWho(); return; }
+    if (scope === 'pin') closePin(false); if (scope === 'menu') closeMenu(); if (scope === 'journal') closeJournal(); if (scope === 'title') closeTitle(); if (scope === 'photo') Shared.close(); if (scope === 'cc') CC.close(); if (scope === 'house') House.close(); if (scope === 'who') { closeWho(); return; }
     if (scope === 'settings') closeSettings(); else if (scope === 'chat') closeChat();
     showView('home'); setFocus(defaultFocus());
   },
   media: function () { readNp(); if (scope === 'cc') CC.refresh(); },
+  doorbell: function (name) {
+    Sound.reply();
+    if (np && np.playing && Native && Native.media && settings.doorbellPause) Native.media('pause');
+    if (!document.hidden && scope === 'home' && !Amb.isOn()) toast((name || 'Doorbell') + ': someone’s at the door');
+  },
   updateProgress: function (pct) { Upd.progress(pct); },
   reminderFired: function (id) { Sound.reply(); CC.refresh(); },
   speaking: function (on) { setSpeaking(on); },
   sleepDone: function () {
+    if (isKids() && (Home.cfg().bedLights || []).length) Home.load().then(function () { (Home.cfg().bedLights || []).map(Home.byId).filter(Boolean).forEach(function (d) { Home.act(d, 'off').catch(function () {}); }); });
     sleepUntil = 0; clearTimeout(sleepTimer); renderSleepPill(); stopSpeaking();
     if (scope === 'pin') closePin(false); if (scope === 'menu') closeMenu(); if (scope === 'settings') closeSettings(); else if (scope === 'chat') closeChat();
     if (scope !== 'setup') { showView('home'); setTimeout(function () { enterAmbient({ sleep: true }); }, 400); }
@@ -3340,6 +3932,7 @@ window.iole = {
 
 /* ======================= Boot ======================= */
 $('searchInput').addEventListener('input', function () { runSearch(this.value); });
+setInterval(function () { if (settings.homeStatus && Home.connected() && Amb.isOn()) Home.load(true).then(function () { Amb.info(); }); }, 5 * 60000);
 setTimeout(function () { if (Cid.acct()) Cid.startRelay(false); }, 2500);
 applyBrand();
 sizeStars(); addEventListener('resize', function () { sizeStars(); Amb.resize(); if (focused && !scopeRoot()) scrollView(focused); });

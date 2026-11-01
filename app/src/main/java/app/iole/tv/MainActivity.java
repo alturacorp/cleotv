@@ -169,6 +169,7 @@ public class MainActivity extends Activity {
 
         web.addJavascriptInterface(new Bridge(), "IoleTV");
         live = new java.lang.ref.WeakReference<>(this);
+        doorbell = new Doorbell(this, new Doorbell.Ring() { @Override public void rang(String name) { js("iole.doorbell(" + JSONObject.quote(name) + ")"); } });
         web.loadUrl(START_URL);
         web.requestFocus();
 
@@ -230,6 +231,7 @@ public class MainActivity extends Activity {
         try { unregisterReceiver(packageReceiver); } catch (Exception ignored) {}
         ui.removeCallbacks(sleepRun); ui.removeCallbacks(breakRun);
         if (nowPlaying != null) nowPlaying.stop();
+        if (doorbell != null) doorbell.stop();
         if (tts != null) { tts.shutdown(); tts = null; }
         io.shutdownNow();
         if (web != null) web.destroy();
@@ -260,6 +262,7 @@ public class MainActivity extends Activity {
     }
 
     private static java.lang.ref.WeakReference<MainActivity> live;
+    private Doorbell doorbell;
     /** Lets receivers tell the page about something (a reminder going off) when Cleo is running. */
     static void notifyJs(String code) { MainActivity a = live == null ? null : live.get(); if (a != null) a.js(code); }
 
@@ -433,6 +436,19 @@ public class MainActivity extends Activity {
             String type = path.endsWith(".png") ? "image/png" : path.endsWith(".webp") ? "image/webp" : "image/jpeg";
             try { return new WebResourceResponse(type, null, new FileInputStream(f)); } catch (Exception e) { return notFound(); }
         }
+    }
+
+    private String[] deviceKeys() {
+        android.content.SharedPreferences p = getSharedPreferences("cleo_keys", MODE_PRIVATE);
+        String pub = p.getString("pub", null), priv = p.getString("priv", null);
+        if (pub == null || priv == null) {
+            try {
+                java.security.KeyPair kp = Envelope.newKeyPair();
+                pub = Envelope.publicB64(kp); priv = Envelope.privateB64(kp);
+                p.edit().putString("pub", pub).putString("priv", priv).apply();
+            } catch (Exception e) { return null; }
+        }
+        return new String[]{pub, priv};
     }
 
     private File updateFile() {
@@ -645,6 +661,44 @@ public class MainActivity extends Activity {
                         .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 return startSafely(i) ? "started" : "missing";
             } catch (Exception e) { return "missing"; }
+        }
+
+        /* ---------- keys for end-to-end encryption ---------- */
+        @JavascriptInterface
+        public String deviceKey() { String[] k = deviceKeys(); return k == null ? "" : k[0]; }
+
+        /** Opens an envelope sealed for this TV; "" if it can't be opened. */
+        @JavascriptInterface
+        public String openEnvelope(String json) {
+            try {
+                String[] k = deviceKeys(); JSONObject e = new JSONObject(json);
+                return Envelope.open(k[1], e.getString("epk"), e.getString("iv"), e.getString("ct"));
+            } catch (Exception e) { return ""; }
+        }
+
+        @JavascriptInterface
+        public String sealFor(String publicKey, String text) { try { return Envelope.seal(publicKey, text); } catch (Exception e) { return ""; } }
+
+        /* ---------- Cleo Home: doorbell, and a check for the Bluetooth phone link ---------- */
+        @JavascriptInterface
+        public void setDoorbell(String url, String token, String entity, String camera) { doorbell.configure(url, token, entity, camera); }
+
+        @JavascriptInterface
+        public String bluetoothCheck() {
+            try {
+                JSONObject o = new JSONObject().put("sdk", Build.VERSION.SDK_INT);
+                android.bluetooth.BluetoothAdapter ad = android.bluetooth.BluetoothAdapter.getDefaultAdapter();
+                o.put("bluetooth", ad != null);
+                o.put("ble", getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE));
+                boolean adv = false;
+                try { adv = ad != null && ad.isMultipleAdvertisementSupported(); } catch (Exception ignored) {}
+                o.put("advertise", adv);
+                // iPhones only offer their notifications (ANCS) to accessories that ask for them in their
+                // advertisement ("service solicitation"), which Android apps can do from Android 12.
+                o.put("solicit", Build.VERSION.SDK_INT >= 31);
+                o.put("possible", adv && Build.VERSION.SDK_INT >= 31);
+                return o.toString();
+            } catch (Exception e) { return "{\"error\":true}"; }
         }
 
         @JavascriptInterface

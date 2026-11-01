@@ -46,13 +46,17 @@ jobs:
           LUME_KEY_PASSWORD: ${{ secrets.LUME_KEY_PASSWORD }}
         run: gradle assembleRelease --no-daemon --stacktrace
 
-      - name: Name the APK
-        run: cp app/build/outputs/apk/release/app-release.apk cleo-tv.apk
+      - name: Name the APKs
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk cleo-tv.apk
+          cp phone/build/outputs/apk/release/phone-release.apk cleo-phone.apk
 
       - uses: actions/upload-artifact@v4
         with:
           name: cleo-tv-1.1.${{ github.run_number }}
-          path: cleo-tv.apk
+          path: |
+            cleo-tv.apk
+            cleo-phone.apk
 
       # Every build becomes the "latest" release, so this link always gets the newest APK:
       # https://github.com/<you>/<repo>/releases/latest/download/cleo-tv.apk
@@ -61,6 +65,11 @@ jobs:
         with:
           tag_name: build-${{ github.run_number }}
           name: Cleo TV 1.1.${{ github.run_number }}
-          body: Built from ${{ github.sha }}. Install with Downloader on your Fire TV.
-          files: cleo-tv.apk
+          body: |
+            Built from ${{ github.sha }}.
+            cleo-tv.apk: install with Downloader on your Fire TV.
+            cleo-phone.apk: the Android Phone link app, for calls and messages on the TV.
+          files: |
+            cleo-tv.apk
+            cleo-phone.apk
           make_latest: true
