@@ -157,6 +157,17 @@ Set up on cleo.ac → Settings → Cleo ID → **Phone link**. On the TV: Settin
 - **iPhone calls**: iPhones only share calls with Bluetooth accessories that ask for them (ANCS), which needs Android 12 on the TV. Settings → Phone link → *iPhone calls over Bluetooth* checks your stick. Fire OS 8 sticks are Android 11, so expect "Not on this stick".
 - A "Watching TV" Focus on the iPhone isn't possible: nothing outside the phone can switch Focus. The TV's own *Do not disturb during films* does the job instead.
 
+## Viewing info (VIS)
+
+Cleo's own version of "Viewing Information Services", built the private way. It's **off** until you turn it on (in setup or **Settings → Viewing info**), separately for each profile, and never on kids profiles or Guest.
+
+- **Records:** the apps you open, what you watch (the title each app reports, how long, whether you finished), your "How was it?" ratings, and genres looked up in the free catalogue. **Never** what's on screen.
+- **Uses:** a few words of taste in Cleo's picks (genres, loved and finished titles; never times or a history), favourites ordered by what you use at this time of day (*Favourites follow your habits*), an Apps sort *Your habits*, and "You usually watch something around now" on Home.
+- **What Cleo knows** (Settings → Viewing info) lists everything in plain words. You can delete single items, pause, or delete everything.
+- **Sync, end to end:** the main profile, when the TV is linked to Cleo ID, is shared with cleo.ac through one encrypted vault per account (`vis/get`, `vis/put` in `cleo-id.js`). The data is sealed with a random AES-256 vault key, and that key is sealed for each device's public key (the TV's Android key pair, and a WebCrypto key pair in each browser). Cleo's server stores only ciphertext. A browser gets access the next time the TV syncs after the browser has published its key. Deletions sync too (tombstones, plus a "cleared at" time for delete-everything).
+- **On cleo.ac:** Settings → Cleo ID → Viewing info → **Show** decrypts it in the browser. You can delete items, export JSON or delete everything. With *Use it in chats here* ticked, a few words of taste go with chat messages, and you get a "carry on with…" note.
+- Never used for ads, never shared or sold.
+
 ## Cleo ID
 
 - **Link this TV**: in setup choose "Set up with my phone", or later Settings, Profile, Cleo ID. The TV shows a QR code and a 6-character code; scan it (it opens `cleo.ac/?link=CODE`) or type it in the web app under Settings, Cleo ID, Link a TV, then confirm with Face ID, a fingerprint or the phone's PIN.

@@ -414,6 +414,14 @@ body:not(.lite):not(.reduce) .modal { background: rgba(28,26,23,.78); -webkit-ba
 .hrow.focused { background: rgba(255,255,255,.16); box-shadow: inset 0 0 0 .22rem var(--ink); }
 #houseClose { display: inline-flex; }
 .hempty { font-size: 1.7rem; color: var(--ink-3); grid-column: 1 / -1; }
+/* What Cleo knows */
+#knowsPane { z-index: 36; }
+.ksum { display: flex; margin: 3rem 0 2.4rem; } .kstat { margin-right: 5rem; } .kstat b { display: block; font: 500 2.6rem "Lora", Georgia, serif; } .kstat span { font-size: 1.35rem; color: var(--ink-3); }
+.kempty { font-size: 1.6rem; color: var(--ink-3); }
+.krow { display: flex; align-items: baseline; justify-content: space-between; padding: 1.1rem 1.4rem; border-radius: 1.2rem; margin-bottom: .4rem; background: rgba(255,255,255,.04); }
+.krow b { font-size: 1.6rem; font-weight: 500; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .krow i { font-style: normal; font-size: 1.3rem; color: var(--ink-3); margin-left: 2rem; white-space: nowrap; }
+.krow.focused { background: rgba(255,255,255,.16); box-shadow: inset 0 0 0 .22rem var(--ink); }
+.kbtns { display: flex; margin: 2.4rem 0 3rem; }
 /* Photos from a phone */
 #photoPane { z-index: 38; background: #000; }
 #photoImg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: opacity .6s var(--ease); }
@@ -758,6 +766,17 @@ body.reduce *, body.reduce *::before, body.reduce *::after { animation: none !im
   </div>
 </section>
 
+<section class="pane" id="knowsPane" role="dialog" aria-label="What Cleo knows">
+  <div class="hwrap">
+    <div class="kicker">Viewing info · <span id="kState"></span></div>
+    <h1>What <span class="brandName">Cleo</span> knows</h1>
+    <div class="hsub">Only what’s listed here. Never what’s on screen, never used for ads.</div>
+    <div class="ksum" id="kSum"></div>
+    <div id="kList"></div>
+    <div class="kbtns"><div class="btn" id="kDone" data-focus data-kind="kdone">Done</div><div class="btn" id="kPause" data-focus data-kind="kpause">Pause</div><div class="btn" data-focus data-kind="kclear">Delete everything</div></div>
+  </div>
+</section>
+
 <section class="pane" id="housePane" role="dialog" aria-label="Home">
   <div class="hwrap">
     <div class="kicker">Home</div>
@@ -856,7 +875,7 @@ var Store = {
 var defaults = { name: '', worker: DEFAULT_WORKER, location: null, clock24: true, reduceMotion: false, largeText: false, ambientMins: 5, ambientNp: true,
   sort: 'az', picksOn: true, tone: 'balanced', units: 'c', pin: '', consentAt: '',
   perf: 'auto', scene: 'auto', ambClock: 'large', dailyNote: true, seasonal: true, breathe: false, nightDim: 60, morningAt: '',
-  speak: false, speechRate: 'normal', sounds: true, breakNudge: 0, wordOfDay: true, homeStatus: false,
+  speak: false, speechRate: 'normal', sounds: true, breakNudge: 0, wordOfDay: true, homeStatus: false, smartFavs: true,
   phoneLink: true, phonePreview: false, callPause: true, filmDnd: false, doorbellPause: false };
 var settings = Object.assign({}, defaults, Store.get('settings', {}));
 if (!settings.worker) settings.worker = DEFAULT_WORKER;
@@ -1148,13 +1167,16 @@ function wireArt(root) {
 function renderDock() {
   favs = favs.filter(function (p) { return !!appMap[p]; });
   var cleo = '<div class="tile cleo" data-focus data-kind="cleo"><div class="art"><div class="cleo-mark"><span class="star shim live">&#10022;</span><b>' + esc(BRAND) + '</b></div><div class="shine"></div></div><div class="label">Talk to ' + esc(BRAND) + '</div></div>';
-  $('dock').innerHTML = (isKids() ? '' : cleo) + favs.map(function (p) { return tileHtml(appMap[p]); }).join('');
+  var order = favs;
+  if (settings.smartFavs && VIS.on() && !moveMode) order = favs.map(function (p, i) { return { p: p, i: i, s: VIS.appScore(p) }; }).sort(function (a, b) { return b.s - a.s || a.i - b.i; }).map(function (x) { return x.p; }); // by habit at this time of day
+  $('dock').innerHTML = (isKids() ? '' : cleo) + order.map(function (p) { return tileHtml(appMap[p]); }).join('');
   wireArt($('dock'));
 }
 function gridApps() {
   var allow = isKids() ? (who().apps || []) : null;
   var out = apps.filter(function (a) { return hidden.indexOf(a.pkg) < 0 && (!allow || allow.indexOf(a.pkg) >= 0); });
-  if (settings.sort === 'used') out.sort(function (a, b) { return (launches[b.pkg] || 0) - (launches[a.pkg] || 0) || a.label.localeCompare(b.label); });
+  if (settings.sort === 'smart' && VIS.on()) out.sort(function (a, b) { return VIS.appScore(b.pkg) - VIS.appScore(a.pkg) || (launches[b.pkg] || 0) - (launches[a.pkg] || 0) || a.label.localeCompare(b.label); });
+  else if (settings.sort === 'used') out.sort(function (a, b) { return (launches[b.pkg] || 0) - (launches[a.pkg] || 0) || a.label.localeCompare(b.label); });
   else out.sort(function (a, b) { return a.label.localeCompare(b.label); });
   return out;
 }
@@ -1174,7 +1196,7 @@ function renderAll(keepPkg) {
 function launch(pkg) {
   if (bedtimeNow()) { toast('It’s bedtime, ' + (profName() || 'sleep well') + '. See you in the morning.'); return; }
   if (isKids() && (who().apps || []).indexOf(pkg) < 0) { toast('Ask a grown-up to add that app'); return; }
-  launches[pkg] = (launches[pkg] || 0) + 1; PS.set('launches', launches);
+  launches[pkg] = (launches[pkg] || 0) + 1; PS.set('launches', launches); VIS.app(pkg);
   lastOpened = [pkg].concat(lastOpened.filter(function (p) { return p !== pkg; })).slice(0, 8); PS.set('recent', lastOpened);
   if (Native) { if (!Native.launch(pkg)) toast('Couldn’t open that app'); }
   else toast('Would open ' + (appMap[pkg] ? appMap[pkg].label : pkg));
@@ -1290,6 +1312,7 @@ function noteNp() {
   it.pos = np.position || 0; it.dur = np.duration; it.at = now;
   if (np.art && it.artV !== np.art && Native && Native.saveArt && !isGuest()) { if (Native.saveArt(key)) it.art = it.artV = np.art; }
   if (it.pos / it.dur >= 0.88 && !it.done) { it.done = now; journalAdd(it, ''); }
+  if (!it.visAt || now - it.visAt > 120000 || it.done) { it.visAt = now; VIS.watch(it); }
   cw.sort(function (a, b) { return b.at - a.at; });
   var cut = now - CW_DAYS * 86400000, keep = [];
   cw.forEach(function (c) { if (c.at >= cut && keep.length < 12) keep.push(c); else if (Native && Native.dropArt) Native.dropArt(c.key); });
@@ -1313,7 +1336,7 @@ function rateCardHtml(c) {
 }
 function cwOpen(c) { launch(c.pkg); setTimeout(function () { toast('Pick up “' + c.title + '” in ' + c.app); }, 300); }
 function rateMenu(c) {
-  var set = function (r) { return function () { c.rated = r; PS.set('cw', cw); rated = [{ t: c.title, app: c.app, r: r, at: Date.now() }].concat(rated.filter(function (x) { return x.t !== c.title; })).slice(0, 40); PS.set('rated', rated); journalRate(c, r); renderPicks(); setFocus(defaultFocus()); toast(r === 'no' ? 'Got it, less like that' : 'Noted · thanks'); }; };
+  var set = function (r) { return function () { c.rated = r; PS.set('cw', cw); rated = [{ t: c.title, app: c.app, r: r, at: Date.now() }].concat(rated.filter(function (x) { return x.t !== c.title; })).slice(0, 40); PS.set('rated', rated); journalRate(c, r); VIS.rate(c, r); renderPicks(); setFocus(defaultFocus()); toast(r === 'no' ? 'Got it, less like that' : 'Noted · thanks'); }; };
   openMenu(c.title, 'How was it?', [
     { label: isKids() ? 'Loved it' : 'Loved it', fn: set('love') },
     { label: 'It was fine', fn: set('fine') },
@@ -2211,6 +2234,7 @@ var Home = (function () {
 var btCache = null;
 function btResult(fresh) { if (!Native || !Native.bluetoothCheck) return null; if (!btCache || fresh) { try { btCache = JSON.parse(Native.bluetoothCheck()); } catch (e) { btCache = null; } } return btCache; }
 function androidName(sdk) { return ({ 25: 'Android 7.1', 28: 'Android 9', 30: 'Android 11', 31: 'Android 12', 32: 'Android 12L', 33: 'Android 13', 34: 'Android 14' })[sdk] || 'Android API ' + sdk; }
+function refreshVisRows() { ['visOn', 'visKnows', 'visSync'].forEach(function (id) { var el = document.querySelector('.row[data-row="' + id + '"]'); if (el) refreshRowEl(el); }); }
 function huePairFlow() {
   if (Home.P.hue.ready()) { openMenu('Philips Hue', 'Connected to ' + Home.cfg().hue.ip, [{ label: 'Disconnect Hue', danger: true, fn: function () { delete Home.cfg().hue; Home.save(); toast('Hue disconnected'); } }, { label: 'Keep it', fn: function () {} }]); return; }
   toast('Looking for your Hue bridge…');
@@ -2352,6 +2376,185 @@ var PhoneLink = (function () {
   return { receive: receive, flush: flush, recent: function () { return recent; }, menu: menu, title: title, body: body };
 })();
 
+/* ======================= Viewing info (VIS) =======================
+   Opt-in, per profile, never on kids profiles or Guest. Records what Cleo already sees: apps you open, what you
+   watch (from each app's own "now playing"), your ratings, and genres from the free catalogue. Never the screen.
+   It shapes picks, the favourites order and suggestions. The profile linked to your Cleo ID syncs with cleo.ac
+   through an end-to-end encrypted vault: the data is sealed with a random vault key, and that key is sealed for each
+   of your devices' public keys, so Cleo's server stores it without being able to read it. */
+var VIS = (function () {
+  var MAX = 1500, syncTimer = 0, syncing = false, status = Store.get('visStatus', '');
+  function allowed() { return !isKids() && !isGuest(); }
+  function enabled() { return allowed() && !!PS.get('visOn', false); }
+  function paused() { return !!PS.get('visPaused', false); }
+  function on() { return enabled() && !paused(); }
+  function data() { var d = PS.get('vis', null); return d && d.events ? d : { events: [], dead: [], clearedAt: 0 }; }
+  function save(d, noSync) { PS.set('vis', d); if (!noSync) schedule(); }
+  function rid() { return 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function record(ev) {
+    if (!on()) return;
+    var d = data(), now = Date.now(); ev.id = ev.id || rid(); ev.u = now; ev.at = ev.at || now; ev.h = new Date(ev.at).getHours();
+    var i = -1; for (var k = 0; k < d.events.length; k++) if (d.events[k].id === ev.id) { i = k; break; }
+    if (i >= 0) d.events[i] = Object.assign(d.events[i], ev); else d.events.unshift(ev);
+    if (d.events.length > MAX) d.events = d.events.slice(0, MAX);
+    save(d);
+  }
+  function app(pkg) { if (!appMap[pkg]) return; record({ t: 'app', pkg: pkg, app: appMap[pkg].label }); }
+  function watch(c) { if (!c || !c.title) return; record({ id: 'w' + c.key + '_' + dayKey2(), t: 'watch', pkg: c.pkg, app: c.app, title: c.title, sub: c.sub || '', mins: Math.round((c.pos || 0) / 60000), len: Math.round((c.dur || 0) / 60000), done: !!c.done }); }
+  function rate(c, r) { if (!c || !c.title) return; record({ id: 'r' + c.key, t: 'rate', title: c.title, app: c.app, r: r }); }
+  function remove(id) { var d = data(); d.events = d.events.filter(function (e) { return e.id !== id; }); d.dead = [id].concat(d.dead || []).slice(0, 3000); save(d); }
+  function clearAll() { save({ events: [], dead: [], clearedAt: Date.now() }); }
+
+  /* ---------- what it learns ---------- */
+  function recent(days) { var cut = Date.now() - days * 86400000; return data().events.filter(function (e) { return e.at >= cut; }); }
+  function taste() {
+    var ev = recent(120), genres = {}, apps = {}, hours = new Array(24).fill(0), loved = [], finished = [];
+    ev.forEach(function (e) {
+      if (e.t === 'watch') { hours[e.h] += 1 + (e.mins || 0) / 30; (e.g || []).forEach(function (g) { genres[g] = (genres[g] || 0) + (e.done ? 2 : 1); }); if (e.done && finished.length < 6) finished.push(e.title); }
+      if (e.t === 'rate' && e.r === 'love' && loved.length < 6) loved.push(e.title);
+      if (e.t === 'app' || e.t === 'watch') apps[e.app] = (apps[e.app] || 0) + 1;
+    });
+    var top = function (o, n) { return Object.keys(o).sort(function (a, b) { return o[b] - o[a]; }).slice(0, n); };
+    var peak = hours.indexOf(Math.max.apply(null, hours)), total = hours.reduce(function (a, b) { return a + b; }, 0);
+    return { genres: top(genres, 3), apps: top(apps, 3).filter(Boolean), peak: total >= 3 ? peak : -1, loved: loved, finished: finished, events: ev.length };
+  }
+  function hourName(h) { var d = new Date(); d.setHours(h, 0, 0, 0); return settings.clock24 ? pad(h) + ':00' : ((h % 12) || 12) + (h < 12 ? 'am' : 'pm'); }
+  // A few words for Cleo's picks prompt. Titles and genres only: never times of day or how long.
+  function summary() {
+    if (!on()) return '';
+    var t = taste(), parts = [];
+    if (t.genres.length) parts.push('tends to enjoy ' + t.genres.join(', '));
+    if (t.loved.length) parts.push('loved ' + t.loved.slice(0, 3).join(', '));
+    if (t.finished.length) parts.push('recently finished ' + t.finished.slice(0, 3).join(', '));
+    if (t.apps.length) parts.push('mostly watches on ' + t.apps.slice(0, 2).join(' and '));
+    return parts.length ? 'From their viewing info (they turned this on): ' + parts.join('; ') + '.' : '';
+  }
+  // Favourites in the order you actually use them around this time of day (last 30 days).
+  function appScore(pkg) {
+    if (!on()) return 0; var h = new Date().getHours(), s = 0;
+    recent(30).forEach(function (e) { if (e.pkg !== pkg || (e.t !== 'app' && e.t !== 'watch')) return; var dh = Math.min(Math.abs(e.h - h), 24 - Math.abs(e.h - h)); s += dh === 0 ? 3 : dh === 1 ? 2 : dh <= 3 ? 1 : 0.25; });
+    return s;
+  }
+  function nudge() {
+    if (!on() || (np && np.playing)) return '';
+    var t = taste(), h = new Date().getHours();
+    return t.peak >= 0 && Math.abs(t.peak - h) <= 0 ? 'You usually watch something around now. Want a pick?' : '';
+  }
+
+  /* ---------- genres from the free catalogue, a few titles a day ---------- */
+  function enrich() {
+    if (!on() || !settings.worker) return;
+    var d = data(), todo = d.events.filter(function (e) { return e.t === 'watch' && !e.g && !e.gTried; }).slice(0, 4);
+    if (!todo.length) return;
+    todo.forEach(function (e) { e.gTried = 1; }); save(d, true);
+    todo.forEach(function (e) {
+      Cat.call('match', { titles: [e.sub || e.title] }).then(function (r) {
+        var m = (r.matches || [])[0]; if (!m) return null;
+        return Cat.call('meta', { id: m.id, type: m.type }).then(function (x) {
+          var d2 = data(); d2.events.forEach(function (y) { if (y.id === e.id) y.g = ((x.meta || {}).genres || []).slice(0, 3); }); save(d2);
+        });
+      }).catch(function () {});
+    });
+  }
+
+  /* ---------- encrypted sync for the profile linked to Cleo ID ---------- */
+  var te = new TextEncoder(), td = new TextDecoder();
+  function b64u(buf) { var u = new Uint8Array(buf), s = ''; for (var i = 0; i < u.length; i++) s += String.fromCharCode(u[i]); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+  function unb(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; var b = atob(s), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
+  function aes(raw) { return crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt', 'decrypt']); }
+  function encrypt(rawKey, obj) { var iv = crypto.getRandomValues(new Uint8Array(12)); return aes(rawKey).then(function (k) { return crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, k, te.encode(JSON.stringify(obj))); }).then(function (ct) { return { iv: b64u(iv), ct: b64u(ct) }; }); }
+  function decrypt(rawKey, blob) { return aes(rawKey).then(function (k) { return crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb(blob.iv) }, k, unb(blob.ct)); }).then(function (b) { return JSON.parse(td.decode(b)); }); }
+  function merge(a, b) {
+    if (!b) return a;
+    var clearedAt = Math.max(a.clearedAt || 0, b.clearedAt || 0), dead = {}, byId = {};
+    (a.dead || []).concat(b.dead || []).forEach(function (id) { dead[id] = 1; });
+    a.events.concat(b.events || []).forEach(function (e) { if (dead[e.id] || e.at < clearedAt) return; var o = byId[e.id]; if (!o || (e.u || 0) > (o.u || 0)) byId[e.id] = e; });
+    var events = Object.keys(byId).map(function (k) { return byId[k]; }).sort(function (x, y) { return y.at - x.at; }).slice(0, MAX);
+    return { events: events, dead: Object.keys(dead).slice(0, 3000), clearedAt: clearedAt };
+  }
+  function api(path, body) {
+    return http('POST', settings.worker + '/id/' + path, JSON.stringify(body || {}), Cid.headers()).then(function (r) { var j = parseJsonLoose(r.text) || {}; j._status = r.status; return j; });
+  }
+  function setStatus(s) { status = s; Store.set('visStatus', s); var el = document.querySelector('.row[data-row="visSync"]'); if (el) refreshRowEl(el); }
+  function schedule() { clearTimeout(syncTimer); syncTimer = setTimeout(sync, 60000); }
+  function syncing_() { return syncing; }
+  function sync(retry) {
+    if (syncing || pid !== 'main' || !Cid.acct() || !enabled() || !Native || !Native.openEnvelope || !window.crypto || !crypto.subtle) return Promise.resolve(false);
+    syncing = true;
+    return api('vis/get').then(function (g) {
+      if (g._status !== 200) throw new Error('get ' + g._status);
+      var rawB64 = g.wrap ? Native.openEnvelope(JSON.stringify(g.wrap)) : '';
+      if (g.blob && !rawB64) { setStatus('waiting'); return false; } // another device holds the key; it shares it on its next sync
+      var raw = rawB64 ? unb(rawB64) : crypto.getRandomValues(new Uint8Array(32));
+      return (g.blob ? decrypt(raw, g.blob) : Promise.resolve(null)).then(function (remote) {
+        var merged = merge(data(), remote); save(merged, true);
+        var wraps = {}, keyB64 = b64u(raw);
+        (g.devices || []).forEach(function (dv) { if (dv.key && (!dv.wrapped || !g.blob)) { var env = parseJsonLoose(Native.sealFor(dv.key, keyB64)); if (env) wraps[dv.id] = env; } });
+        return encrypt(raw, merged).then(function (blob) { return api('vis/put', { version: g.version, blob: blob, wraps: wraps }); }).then(function (p) {
+          if (p._status === 409 && !retry) { syncing = false; return sync(true); }
+          if (p._status !== 200) throw new Error('put ' + p._status);
+          setStatus('ok:' + Date.now()); return true;
+        });
+      });
+    }).catch(function () { setStatus('error'); return false; }).then(function (r) { syncing = false; return r; });
+  }
+  function statusText() {
+    if (pid !== 'main') return 'Only the main profile syncs';
+    if (!Cid.acct()) return 'Link Cleo ID to sync';
+    if (status === 'waiting') return 'Waiting for another device';
+    if (status === 'error') return 'Couldn’t sync just now';
+    if (/^ok:/.test(status)) { var d = new Date(+status.slice(3)); return 'Synced ' + (d.toDateString() === new Date().toDateString() ? timeStr(d) : d.getDate() + ' ' + MONTHS[d.getMonth()].slice(0, 3)); }
+    return 'Not synced yet';
+  }
+  return { allowed: allowed, enabled: enabled, on: on, paused: paused, record: record, app: app, watch: watch, rate: rate, remove: remove, clearAll: clearAll,
+    data: data, taste: taste, summary: summary, appScore: appScore, nudge: nudge, enrich: enrich, sync: sync, statusText: statusText, hourName: hourName, merge: merge,
+    setOn: function (v) { PS.set('visOn', !!v); if (v) { PS.set('visPaused', false); setTimeout(sync, 2000); } },
+    setPaused: function (v) { PS.set('visPaused', !!v); } };
+})();
+function dayKey2() { var d = new Date(); return d.getFullYear() + '' + pad(d.getMonth() + 1) + pad(d.getDate()); }
+
+/* ---------- "What Cleo knows": everything recorded, in plain words ---------- */
+var Knows = (function () {
+  var prev = null, prevScope = 'settings';
+  function line(e) {
+    var d = new Date(e.at), when = (d.toDateString() === new Date().toDateString() ? 'Today' : DAYS[d.getDay()].slice(0, 3) + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()].slice(0, 3)) + ', ' + timeStr(d);
+    if (e.t === 'app') return { what: 'Opened ' + e.app, when: when };
+    if (e.t === 'rate') return { what: 'Rated ' + e.title + ': ' + ({ love: 'loved it', fine: 'it was fine', no: 'not for me' })[e.r], when: when };
+    return { what: (e.done ? 'Finished ' : 'Watched ') + e.title + (e.sub ? ' (' + e.sub + ')' : '') + ' in ' + e.app, when: when + (e.mins ? ' · ' + e.mins + ' min' : '') + (e.g && e.g.length ? ' · ' + e.g.join(', ') : '') };
+  }
+  function render() {
+    var t = VIS.taste(), ev = VIS.data().events;
+    var sum = [];
+    if (t.genres.length) sum.push('<div class="kstat"><b>' + esc(t.genres.join(', ')) + '</b><span>what you watch most</span></div>');
+    if (t.apps.length) sum.push('<div class="kstat"><b>' + esc(t.apps.slice(0, 2).join(', ')) + '</b><span>apps you use most</span></div>');
+    if (t.peak >= 0) sum.push('<div class="kstat"><b>Around ' + esc(VIS.hourName(t.peak)) + '</b><span>when you usually watch</span></div>');
+    $('kSum').innerHTML = sum.join('') || '<p class="kempty">' + (VIS.enabled() ? 'Nothing yet. It fills in as you watch.' : 'Viewing info is off for this profile.') + '</p>';
+    $('kState').textContent = !VIS.enabled() ? 'Off' : VIS.paused() ? 'Paused' : 'On' + (pid === 'main' ? ' · ' + VIS.statusText() : '');
+    $('kList').innerHTML = ev.slice(0, 40).map(function (e) { var l = line(e); return '<div class="krow" data-focus data-kind="kitem" data-id="' + esc(e.id) + '"><b>' + esc(l.what) + '</b><i>' + esc(l.when) + '</i></div>'; }).join('') +
+      (ev.length > 40 ? '<p class="kempty">and ' + (ev.length - 40) + ' older items. All of them are on cleo.ac, Settings, Cleo ID, Viewing info.</p>' : '');
+    $('kPause').textContent = VIS.paused() ? 'Resume' : 'Pause';
+    $('kPause').style.display = VIS.enabled() ? '' : 'none';
+  }
+  function open() {
+    if (scope !== 'knows') { prev = focused; prevScope = scope; }
+    $('knowsPane').classList.add('on'); scope = 'knows'; render();
+    setFocus($('kList').querySelector('[data-focus]') || $('kDone'));
+  }
+  function close() { $('knowsPane').classList.remove('on'); scope = prevScope === 'knows' ? 'settings' : prevScope; if (focused) focused.classList.remove('focused'); var r = document.querySelector('.row[data-row="visKnows"]'); setFocus(prev && document.body.contains(prev) ? prev : r || defaultFocus()); }
+  function act(el) {
+    var k = el.getAttribute('data-kind');
+    if (k === 'kdone') { close(); return; }
+    if (k === 'kpause') { VIS.setPaused(!VIS.paused()); toast(VIS.paused() ? 'Paused. Nothing new is recorded.' : 'Recording again'); render(); setFocus($('kPause')); return; }
+    if (k === 'kclear') { openMenu('Delete all viewing info?', pid === 'main' && Cid.acct() ? 'From this TV, and from your other devices when they next sync.' : 'From this profile on this TV.', [
+      { label: 'Cancel', fn: function () {} },
+      { label: 'Delete everything', danger: true, fn: function () { VIS.clearAll(); VIS.sync(); render(); toast('Viewing info deleted'); setFocus($('kDone')); } }]); return; }
+    if (k === 'kitem') { var id = el.getAttribute('data-id'); openMenu('Delete this?', el.querySelector('b').textContent, [
+      { label: 'Delete', danger: true, fn: function () { VIS.remove(id); render(); setFocus($('kList').querySelector('[data-focus]') || $('kDone')); } },
+      { label: 'Keep it', fn: function () {} }]); }
+  }
+  return { open: open, close: close, act: act };
+})();
+
 /* ======================= Hero + Tonight picks ======================= */
 function periodKey() { var d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate() + ':' + partOfDay(d.getHours()); }
 function tonightFresh() { return tonight && tonight.key === periodKey() && tonight.picks && tonight.picks.length; }
@@ -2367,7 +2570,7 @@ function renderHero() {
   var title, sub;
   if (isKids()) { title = bedtimeNow() ? 'It’s bedtime' + (name ? ', ' + name : '') + '.' : 'Hi' + (name ? ' ' + name : '') + '! What shall we watch?'; sub = bedtimeNow() ? 'The TV is resting until morning.' : 'Pick one of your apps below.'; kicker = 'Today'; }
   else if (settings.picksOn && tonightFresh()) { title = tonight.line; sub = tonight.sub; }
-  else { title = FALLBACK[pod][0]; sub = FALLBACK[pod][1].replace('{b}', BRAND); }
+  else { title = FALLBACK[pod][0]; sub = VIS.nudge() || FALLBACK[pod][1].replace('{b}', BRAND); }
   if ($('heroTitle').textContent === title && $('heroKicker').textContent === kicker) return;
   $('heroKicker').textContent = kicker; $('heroTitle').textContent = title; $('heroSub').textContent = sub;
   var b = $('heroBlock'); b.classList.remove('hero-in'); void b.offsetWidth; b.classList.add('hero-in');
@@ -2410,7 +2613,7 @@ function loadTonight(force) {
     'Give exactly 4 picks. "app" must be one of the installed apps listed. Prefer real, well-known titles that app is likely to carry; "why" is max 7 words. Keep everything light: this shows on a shared screen.';
   var user = 'Installed apps: ' + streaming.join(', ') + '. It is ' + DAYS[d.getDay()] + ' ' + pod + (weatherNow ? ', ' + weatherNow.t + '°C' : '') + '. ' +
     (likedTitles().length ? 'Recently enjoyed: ' + likedTitles().join(', ') + '. ' : '') + (dislikedTitles().length ? 'Didn’t enjoy: ' + dislikedTitles().join(', ') + '. ' : '') +
-    (cwShown().length ? 'Already part-way through: ' + cwShown().slice(0, 3).map(function (c) { return c.title; }).join(', ') + ' (don’t repeat these). ' : '') + 'Suggest four picks.';
+    (VIS.summary() ? VIS.summary() + ' ' : '') + (cwShown().length ? 'Already part-way through: ' + cwShown().slice(0, 3).map(function (c) { return c.title; }).join(', ') + ' (don’t repeat these). ' : '') + 'Suggest four picks.';
   askWorker([{ role: 'system', content: sys }, { role: 'user', content: user }]).then(function (text) {
     var j = parseJsonLoose(text);
     if (!j || !j.picks || !j.picks.length) throw new Error('bad picks');
@@ -2445,7 +2648,7 @@ function openPick(i) {
 var focused = null, scope = 'home', view = 'home', lastFocus = {};
 function scopeRoot() {
   if (scope === 'menu') return $('menu'); if (scope === 'settings') return $('settingsPane'); if (scope === 'chat') return $('chat');
-  if (scope === 'pin') return $('pinPane'); if (scope === 'link') return $('linkPane'); if (scope === 'who') return $('whoPane'); if (scope === 'journal') return $('journalPane'); if (scope === 'title') return $('titlePane'); if (scope === 'photo') return $('photoPane'); if (scope === 'cc') return $('cc'); if (scope === 'house') return $('housePane'); if (scope === 'setup') return setupStepEl(setupState.step);
+  if (scope === 'pin') return $('pinPane'); if (scope === 'link') return $('linkPane'); if (scope === 'who') return $('whoPane'); if (scope === 'journal') return $('journalPane'); if (scope === 'title') return $('titlePane'); if (scope === 'photo') return $('photoPane'); if (scope === 'cc') return $('cc'); if (scope === 'house') return $('housePane'); if (scope === 'knows') return $('knowsPane'); if (scope === 'setup') return setupStepEl(setupState.step);
   return null;
 }
 function focusables() {
@@ -2466,7 +2669,7 @@ function setFocus(el) {
   focused = el; el.classList.add('focused');
   if (!scopeRoot()) { lastFocus[view] = el; scrollView(el); setBackdrop(view === 'home' || view === 'search' ? el.getAttribute('data-bg') : null); }
   else if (el.classList.contains('sec')) showSection(el.getAttribute('data-sec'));
-  else if ((scope === 'cc' || scope === 'house') && el.scrollIntoView) { try { el.scrollIntoView({ block: 'nearest', behavior: settings.reduceMotion ? 'auto' : 'smooth' }); } catch (e) {} }
+  else if ((scope === 'cc' || scope === 'house' || scope === 'knows') && el.scrollIntoView) { try { el.scrollIntoView({ block: 'nearest', behavior: settings.reduceMotion ? 'auto' : 'smooth' }); } catch (e) {} }
   else if (el.parentNode && el.parentNode.id === 'rows') scrollBox($('rows'), $('rowsBox'), el);
   else if (el.classList.contains('fav')) scrollBox($('favGrid'), $('favBox'), el);
 }
@@ -2532,6 +2735,7 @@ function activate(el) {
   if (scope === 'title') { titleActivate(el); return; }
   if (scope === 'photo') { Shared.toggleShow(); return; }
   if (scope === 'cc') { CC.act(el); return; }
+  if (scope === 'knows') { Knows.act(el); return; }
   if (scope === 'house') { if (el.id === 'houseClose') House.close(); else homeDeviceAct(Home.byId(el.getAttribute('data-id')), el); return; }
   if (el.getAttribute('data-kind') === 'cc') { CC.open(); return; }
   if (k === 'sinput') { $('searchInput').focus(); return; }
@@ -2692,7 +2896,23 @@ var ROW = {
   picksOn: { label: 'Tonight’s picks', type: 'bool', key: 'picksOn', hint: BRAND + ' suggests something to watch',
     help: 'Uses the names of your streaming apps. Turn it off to show recently opened apps instead.' },
   refresh: { label: 'New picks now', type: 'action', fmt: function () { return picksLoading ? 'Working…' : ''; }, run: function () { tonight = null; PS.set('tonight', null); loadTonight(true); toast('Asking ' + BRAND + ' for new picks'); } },
-  sort: { label: 'Sort Apps', type: 'cycle', key: 'sort', values: ['az', 'used'], fmt: function (v) { return v === 'used' ? 'Most used' : 'A–Z'; } },
+  sort: { label: 'Sort Apps', type: 'cycle', key: 'sort', values: ['az', 'used', 'smart'], fmt: function (v) { return v === 'used' ? 'Most used' : v === 'smart' ? 'Your habits (viewing info)' : 'A–Z'; } },
+  smartFavs: { label: 'Favourites follow your habits', type: 'bool', key: 'smartFavs', hint: 'With viewing info on: what you use at this time of day comes first' },
+  visOn: { label: 'Viewing info', type: 'action', fmt: function () { return !VIS.allowed() ? 'Not on this profile' : VIS.enabled() ? (VIS.paused() ? 'Paused' : 'On') : 'Off'; },
+    hint: 'Lets ' + BRAND + ' learn what you like from what you watch',
+    help: 'Records the apps you open, what you watch (titles from each app), your ratings and their genres. Never what’s on screen. It shapes picks and the order of your apps. For the profile linked to your Cleo ID it’s shared with cleo.ac, end-to-end encrypted, so Cleo can’t read it. Never used for ads or shared with anyone. Off on kids profiles and Guest.',
+    run: function (el) {
+      if (!VIS.allowed()) { toast('Viewing info is never used on kids profiles or Guest'); return; }
+      if (VIS.enabled()) { openMenu('Viewing info', 'On for ' + (profName() || 'this profile'), [
+        { label: VIS.paused() ? 'Resume' : 'Pause', fn: function () { VIS.setPaused(!VIS.paused()); refreshVisRows(); } },
+        { label: 'Turn off and delete it', danger: true, fn: function () { VIS.clearAll(); VIS.sync().then(function () { VIS.setOn(false); refreshVisRows(); }); VIS.setOn(false); refreshVisRows(); toast('Viewing info off and deleted'); } }]); return; }
+      openMenu('Turn on viewing info?', 'Apps you open, what you watch and your ratings, used only to suit ' + BRAND + ' to you. Never what’s on screen, never ads. See and delete it any time.', [
+        { label: 'Turn on', fn: function () { VIS.setOn(true); refreshVisRows(); toast('Viewing info on'); } },
+        { label: 'Not now', fn: function () {} }]);
+    } },
+  visKnows: { label: 'What ' + BRAND + ' knows', type: 'action', fmt: function () { var n = VIS.data().events.length; return n ? n + ' items' : 'Nothing yet'; }, hint: 'Everything recorded, in plain words. Delete any of it.', run: function () { Knows.open(); } },
+  visSync: { label: 'Shared with cleo.ac', type: 'action', fmt: function () { return VIS.enabled() ? VIS.statusText() : 'Off'; }, hint: 'End-to-end encrypted between your devices',
+    help: 'Only the main profile, and only when this TV is linked to your Cleo ID. OK to sync now.', run: function () { if (!VIS.enabled()) { toast('Turn viewing info on first'); return; } toast('Syncing…'); VIS.sync().then(function (ok) { toast(ok ? 'Synced' : VIS.statusText()); refreshVisRows(); }); } },
   hidden: { label: 'Hidden apps', type: 'action', fmt: function () { return hidden.length ? hidden.length + ' hidden · OK to restore' : 'None'; },
     run: function () { if (hidden.length) { hidden = []; Store.set('hidden', hidden); renderAll(); toast('Hidden apps restored'); } } },
   clock24: { label: '24-hour clock', type: 'bool', key: 'clock24' },
@@ -2795,6 +3015,7 @@ var ROW = {
     help: 'Photos you send are passed through ' + BRAND + '’s server and deleted there as soon as this TV has them (after a day at most). They stay on this TV for 30 days, or until you remove them. They also appear in the Memories ambient scene.',
     run: function () { closeSettings(); Shared.open(0); } },
   pCards: { label: 'Word cards', type: 'info', fmt: function () { return 'Free Dictionary API'; }, hint: 'Only the word, when you ask what one means' },
+  pVis: { label: 'Viewing info', type: 'info', fmt: function () { return VIS.enabled() ? 'On this TV, encrypted to cleo.ac' : 'Off'; }, hint: 'Opt-in. Never the screen, never ads. Picks get a few words of taste, never times or history.' },
   pPhone: { label: 'Calls and messages', type: 'info', fmt: function () { return settings.phoneLink ? 'Shown, not kept' : 'Off'; }, hint: 'From the Android app and Mac helper: encrypted for this TV. From iPhone Shortcuts: passed through Cleo’s server, not stored.' },
   pSmart: { label: 'Smart home', type: 'info', fmt: function () { return Home.connected() ? 'Your hubs and their makers' : 'Not connected'; }, hint: 'Keys stay on this TV. Home Assistant, Hue and Shelly are reached on your network; Tuya, SmartThings, Govee and LIFX through their own servers. Chat commands for them stay on the TV.' },
   pUpdate: { label: 'Update check', type: 'info', fmt: function () { return 'GitHub'; }, hint: 'Asks for the latest version; nothing about you is sent' },
@@ -2829,10 +3050,11 @@ var SECTIONS = [
   { id: 'ambient', name: 'Ambient', blurb: 'What the TV shows when nobody’s using it.', rows: ['ambPreview', 'scene', 'ambientMins', 'ambClock', 'ambientNp', 'dailyNote', 'wordOfDay', 'seasonal', 'morningAt', 'breathe', 'nightDim', 'burnin'] },
   { id: 'cleo', name: BRAND, blurb: 'How ' + BRAND + ' talks to you on this TV.', rows: ['tone', 'speak', 'speechRate', 'breakNudge', 'privateTv', 'clearChat'] },
   { id: 'smarthome', name: 'Smart home', blurb: 'Lights, heating and the doorbell, from the TV.', rows: ['hConn', 'hKeys', 'hHaUrl', 'hHue', 'hShelly', 'hWatch', 'hDim', 'hDoorbell', 'doorbellPause', 'homeStatus', 'hForget'] },
+  { id: 'vis', name: 'Viewing info', blurb: 'What ' + BRAND + ' learns from what you watch, and what you can do about it.', rows: ['visOn', 'visKnows', 'visSync', 'smartFavs'] },
   { id: 'phone', name: 'Phone link', blurb: 'Calls and messages from your phone, on the TV.', rows: ['phoneLink', 'phonePreview', 'callPause', 'filmDnd', 'btCheck'] },
   { id: 'weather', name: 'Weather', blurb: 'For the clock, ambient mode and picks.', rows: ['location', 'units'] },
   { id: 'display', name: 'Display & motion', blurb: 'Easier on the eyes, and on the stick.', rows: ['reduceMotion', 'largeText', 'perf', 'sounds'] },
-  { id: 'privacy', name: 'Privacy', blurb: 'What leaves this TV, and where it goes.', rows: ['pChats', 'pApps', 'pNote', 'pTown', 'pSearch', 'pCards', 'pShare', 'pPhone', 'pSmart', 'pUpdate', 'pRem', 'pWeather2', 'pLocal', 'pWatch', 'pHome', 'pVoice', 'pCid', 'pAgreed', 'pTerms'] },
+  { id: 'privacy', name: 'Privacy', blurb: 'What leaves this TV, and where it goes.', rows: ['pChats', 'pApps', 'pNote', 'pTown', 'pSearch', 'pCards', 'pShare', 'pVis', 'pPhone', 'pSmart', 'pUpdate', 'pRem', 'pWeather2', 'pLocal', 'pWatch', 'pHome', 'pVoice', 'pCid', 'pAgreed', 'pTerms'] },
   { id: 'about', name: 'About', blurb: 'Version, help and the advanced bits.', rows: ['version', 'update', 'device', 'media', 'firetv', 'worker', 'reset'] }
 ];
 function rowValueHtml(id) {
@@ -2991,7 +3213,7 @@ function goStep(n) {
   if (n === 3) renderFavPicker();
   if (n === 4) {
     if (!setupState.clockSet) { settings.clock24 = localPrefers24(); setupState.clockSet = true; Store.set('setup', setupState); saveSettings(); tick(); }
-    $('eveRows').innerHTML = ['location', 'ambientMins', 'clock24'].map(rowHtml).join('');
+    $('eveRows').innerHTML = ['location', 'ambientMins', 'clock24', 'visOn'].map(rowHtml).join('');
   }
   if (n === 5) $('doneName').textContent = settings.name ? ', ' + settings.name : '';
   var first = setupStepEl(n).querySelector(n === 1 ? '[data-kind="consent"]' : n === 2 ? '[data-kind="namefield"]' : n === 3 ? '.fav' : n === 4 ? '.row' : '.cta.primary, [data-kind="setupnext"]');
@@ -3905,6 +4127,7 @@ function back() {
   if (scope === 'photo') return Shared.close();
   if (scope === 'cc') return CC.close();
   if (scope === 'house') return House.close();
+  if (scope === 'knows') return Knows.close();
   if (view === 'search' && scope === 'home') { showView('home'); setFocus(defaultFocus()); return; }
   if (scope === 'setup') { if (setupState.step > 0) goStep(setupState.step - 1); return; }
   if (scope === 'settings') { if (focused && focused.classList.contains('row')) { setFocus(document.querySelector('.sec[data-sec="' + curSec + '"]')); return; } return closeSettings(); }
@@ -4003,12 +4226,12 @@ window.iole = {
     var away = Date.now() - lastInput;
     unlocked = false; Amb.exit(); resetIdle(); tick(); renderSleepPill(); readNp(); loadApps(); refreshHomeRow();
     var keep = focused && focused.getAttribute('data-pkg'); if (!scopeRoot()) renderAll(keep);
-    if (setupState.done) { Upd.check(false).then(function (u) { if (u && scope === 'home') Upd.offer(false); }); loadTonight(false); scheduleBedtime(); if (whoOnWake() && away > 3 * 3600000 && !isKids() && (scope === 'home')) openWho(false); }
+    if (setupState.done) { setTimeout(function () { VIS.sync(); }, 5000); Upd.check(false).then(function (u) { if (u && scope === 'home') Upd.offer(false); }); loadTonight(false); scheduleBedtime(); if (whoOnWake() && away > 3 * 3600000 && !isKids() && (scope === 'home')) openWho(false); }
   },
   home: function () {
     Amb.exit(); if (moveMode) endMove();
     if (scope === 'setup' || scope === 'link') return;
-    if (scope === 'pin') closePin(false); if (scope === 'menu') closeMenu(); if (scope === 'journal') closeJournal(); if (scope === 'title') closeTitle(); if (scope === 'photo') Shared.close(); if (scope === 'cc') CC.close(); if (scope === 'house') House.close(); if (scope === 'who') { closeWho(); return; }
+    if (scope === 'pin') closePin(false); if (scope === 'menu') closeMenu(); if (scope === 'journal') closeJournal(); if (scope === 'title') closeTitle(); if (scope === 'photo') Shared.close(); if (scope === 'cc') CC.close(); if (scope === 'house') House.close(); if (scope === 'knows') Knows.close(); if (scope === 'who') { closeWho(); return; }
     if (scope === 'settings') closeSettings(); else if (scope === 'chat') closeChat();
     showView('home'); setFocus(defaultFocus());
   },
@@ -4031,6 +4254,8 @@ window.iole = {
 
 /* ======================= Boot ======================= */
 $('searchInput').addEventListener('input', function () { runSearch(this.value); });
+setTimeout(function () { VIS.enrich(); VIS.sync(); }, 20000);
+setInterval(function () { VIS.enrich(); }, 6 * 3600000);
 setInterval(function () { if (settings.homeStatus && Home.connected() && Amb.isOn()) Home.load(true).then(function () { Amb.info(); }); }, 5 * 60000);
 setTimeout(function () { if (Cid.acct()) Cid.startRelay(false); }, 2500);
 applyBrand();
