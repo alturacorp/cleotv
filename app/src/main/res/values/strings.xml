@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Cleo</string>
+    <string name="redirect_name">Cleo: open Cleo from Home</string>
+    <string name="redirect_description">Opens Cleo whenever the Fire TV home screen appears. It only notices which app is in front, never what is on screen or what you type.</string>
+</resources>
