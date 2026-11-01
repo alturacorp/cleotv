@@ -3592,9 +3592,12 @@ function askWorker(messages, extra) {
       var j = parseJsonLoose(r.text);
       if (j && j.error === 'lume_disabled') { var e = new Error('disabled'); e.disabled = true; throw e; }
     }
-    if (r.status >= 400) throw new Error('HTTP ' + r.status);
+    if (r.status >= 400) {
+      var ej = parseJsonLoose(r.text), why = ej && (ej.error || ej.message);
+      throw new Error('HTTP ' + r.status + (why ? ': ' + String(typeof why === 'string' ? why : JSON.stringify(why)).slice(0, 80) : ''));
+    }
     var text = extractReply(r.text);
-    if (!text) throw new Error('empty');
+    if (!text) throw new Error('Empty reply from the Worker');
     return text;
   });
 }
@@ -3687,7 +3690,7 @@ function sendChat(text, notHome) {
   }).catch(function (e) {
     chatLog.push(e && e.disabled
       ? { role: 'cleo', text: 'A support agent is handling this conversation.' }
-      : { role: 'err', text: 'Couldn’t reach ' + BRAND + ' just now. Check the TV is online and try again.' });
+      : { role: 'err', text: 'Couldn’t reach ' + BRAND + ' just now. Check the TV is online and try again.' + (e && e.message ? ' (' + (/^HTTP |^Empty/.test(e.message) ? e.message : 'No connection to ' + String(settings.worker || '').replace(/^https?:\/\//, '')) + ')' : '') });
     Sound.error();
   }).then(function () {
     thinking = false; document.body.classList.remove('thinking'); $('chatStatus').textContent = speakingNow ? 'Speaking…' : 'Here with you';
