@@ -122,6 +122,40 @@ Cleo checks the GitHub repo that built it for a newer release (a few times a day
 
 Ask Cleo about what's playing: *who's in this?*, *how many episodes are left?*, *is it worth finishing?* Cleo looks the title up in the catalogue (cast, summary and, for series, the episode list) and works out which episode you're on from the session's title or episode name. When you ask, the title and how far in you are go with that message. Chat suggests these questions when you open it while something's playing. It depends on the app publishing a media session with a title; most big apps do.
 
+## Cleo Home (smart home)
+
+Settings → **Smart home**, then everything appears in Control Center (☰) and in **Your devices**.
+
+- **Home Assistant** (recommended): enter its address on the TV (use the IP, like `http://192.168.1.20:8123`), then send a long-lived token from cleo.ac → Settings → Cleo ID → Smart home. Cleo reads rooms from your HA areas.
+- **Philips Hue**: Settings → Smart home → Philips Hue → press the bridge button → Pair.
+- **Shelly**: add each plug's IP address on the TV.
+- **SmartThings, Govee, LIFX**: paste their keys on cleo.ac. They go through those companies' own servers.
+
+Keys typed on cleo.ac are encrypted in the browser for this TV (the TV publishes its own public key when it's linked to Cleo ID), so Cleo's server can't read them. They're stored only on the TV.
+
+- **Chat**: *turn off the lamp*, *dim the bedroom lights to 30%*, *set the heating to 21*, *turn on movie night*, *turn everything off*. These are handled on the TV and never sent to Cleo. Locks and alarms always ask on screen first.
+- **Lights that follow what you watch**: in Your devices, ☰ on a light → *Dim for films*, then turn on *Lights follow what you watch*. They dim when a film or episode plays, come up a bit when you pause, and go back afterwards.
+- **Doorbell** (Home Assistant): choose the doorbell entity and a camera. When it rings, a card with a snapshot appears over whatever is playing (watched natively every 2 s on your network). Optionally it also pauses playback.
+- **Kids' bedtime**: ☰ on a light → *Turn off at kids' bedtime*.
+- **Ambient**: optional status line (unlocked doors, heating, lights left on).
+- Cleo now allows plain `http://` only for addresses on your home network (needed for Home Assistant, Hue and Shelly).
+
+## Phone link (calls and messages on the TV)
+
+Set up on cleo.ac → Settings → Cleo ID → **Phone link**. On the TV: Settings → **Phone link**.
+
+| | What reaches the TV | How |
+|---|---|---|
+| **Android** (`cleo-phone.apk` from the releases) | Calls (decline from the TV), texts, WhatsApp, Telegram, Signal and more, with quick replies | The app reads notifications and encrypts them for the TV |
+| **iPhone** | iMessages and texts | A Shortcuts *Message* automation. cleo.ac shows the exact steps and your token. Not encrypted (Shortcuts can't), not kept. |
+| **Mac** (`cleo-mac-helper.py`) | iMessages and texts that reach the Mac | Reads Messages' database (needs Full Disk Access), encrypted for the TV |
+
+- Cards appear over whatever is playing. They show only "Message from Mum" unless you turn on *Show message text*, and they never appear on a kids profile.
+- *Pause for calls* is on by default. *Do not disturb during films* holds messages until you pause; calls still come through.
+- The last few appear in Control Center. On Android, choose one there to send a quick reply through the original app.
+- **iPhone calls**: iPhones only share calls with Bluetooth accessories that ask for them (ANCS), which needs Android 12 on the TV. Settings → Phone link → *iPhone calls over Bluetooth* checks your stick. Fire OS 8 sticks are Android 11, so expect "Not on this stick".
+- A "Watching TV" Focus on the iPhone isn't possible: nothing outside the phone can switch Focus. The TV's own *Do not disturb during films* does the job instead.
+
 ## Cleo ID
 
 - **Link this TV**: in setup choose "Set up with my phone", or later Settings, Profile, Cleo ID. The TV shows a QR code and a 6-character code; scan it (it opens `cleo.ac/?link=CODE`) or type it in the web app under Settings, Cleo ID, Link a TV, then confirm with Face ID, a fingerprint or the phone's PIN.

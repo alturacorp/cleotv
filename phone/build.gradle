@@ -1,0 +1,56 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Cleo Phone link: the Android companion that sends calls and messages to Cleo TV.
+def ciBuild = (System.getenv('GITHUB_RUN_NUMBER') ?: '1').toInteger()
+
+android {
+    namespace 'app.iole.phone'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'app.iole.phone'
+        minSdk 26
+        targetSdk 34
+        versionCode ciBuild
+        versionName "1.0.${ciBuild}"
+        buildConfigField 'String', 'WORKER', '"https://iole.graggle9901.workers.dev"'
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    signingConfigs {
+        lume {
+            def ks = System.getenv('LUME_KEYSTORE_PATH')
+            if (ks) {
+                storeFile file(ks)
+                storePassword System.getenv('LUME_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('LUME_KEY_ALIAS')
+                keyPassword System.getenv('LUME_KEY_PASSWORD')
+            } else {
+                storeFile rootProject.file('signing/lume-tv.keystore')
+                storePassword 'lumetv-sideload'
+                keyAlias 'lumetv'
+                keyPassword 'lumetv-sideload'
+            }
+        }
+    }
+
+    buildTypes {
+        release { minifyEnabled false; signingConfig signingConfigs.lume }
+        debug { signingConfig signingConfigs.lume }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+}
