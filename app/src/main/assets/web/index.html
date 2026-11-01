@@ -2612,28 +2612,61 @@ var Home = (function () {
     return null;
   }
 
-  /* ---------- lights that follow what you're watching ---------- */
-  var watchState = 'idle', saved = {};
+  /* ---------- lights that follow what you're watching ----------
+     Watching starts when a film or episode has been playing for a little while (so trailers and the previews that
+     autoplay while you browse Netflix don't dim the room) and ends when nothing has played for a couple of minutes
+     (so the next episode doesn't flash the lights up), when it's been paused a long time, or when it reaches the end.
+     At the end every light goes back exactly as it was. */
+  var watchState = 'idle', saved = {}, rawSince = 0, rawNow = 'idle', pausedAt = 0, wTimer = 0;
+  var W_START = 15000, W_END = 120000, W_LONG_PAUSE = 15 * 60000, W_SETTLE = 4000;
   function watchLights() { var ids = (cfg.watch && cfg.watch.lights) || []; return ids.map(byId).filter(Boolean); }
-  function followPlayback() {
-    if (!cfg.watch || !cfg.watch.on || isKids()) return;
-    var yt = typeof Yt !== 'undefined' && Yt.active(), vid = yt || npIsVideo(), on = yt ? Yt.isPlaying() : np && np.playing;
-    var now = vid && on ? 'playing' : vid ? 'paused' : 'idle';
-    if (now === watchState) return;
-    var prev = watchState; watchState = now;
-    load().then(function () {
+  function watchRaw() {
+    var yt = typeof Yt !== 'undefined' && Yt.active(), vid = yt || npIsVideo(), on = yt ? Yt.isPlaying() : !!(np && np.playing);
+    // The last minute of a film is credits: count it as finished, so the lights come up as they roll.
+    if (vid && !yt && np && np.duration > 20 * 60000 && np.position > np.duration - 60000) return 'idle';
+    return vid && on ? 'playing' : vid ? 'paused' : 'idle';
+  }
+  function setLights(how) {
+    return load(how === 'dim').then(function () {
       var ls = watchLights(); if (!ls.length) return;
-      if (now === 'playing') {
-        if (prev === 'idle') ls.forEach(function (d) { saved[d.id] = { on: d.on, bri: d.bri }; });
-        ls.forEach(function (d) { if (saved[d.id] && saved[d.id].on !== false) act(d, 'bri', cfg.watch.dim != null ? cfg.watch.dim : 20).catch(function () {}); });
-      } else if (now === 'paused') {
-        ls.forEach(function (d) { if (saved[d.id] && saved[d.id].on !== false) act(d, 'bri', cfg.watch.pause || 50).catch(function () {}); });
-      } else {
-        ls.forEach(function (d) { var s = saved[d.id]; if (!s) return; (s.on === false ? act(d, 'off') : act(d, 'bri', s.bri || 100)).catch(function () {}); });
-        saved = {};
-      }
+      var w = cfg.watch, dim = w.dim != null ? w.dim : 20, pause = w.pause == null ? 50 : w.pause;
+      if (how === 'dim') ls.forEach(function (d) { if (!saved[d.id]) saved[d.id] = { on: d.on, bri: d.bri }; });
+      ls.forEach(function (d) {
+        var sv = saved[d.id]; if (!sv) return;
+        var p;
+        if (how === 'restore') p = sv.on === false ? act(d, 'off') : d.kind === 'switch' ? act(d, 'on') : act(d, 'bri', sv.bri || 100);
+        else if (sv.on === false) return; // a light that was off stays off
+        else if (d.kind === 'switch') p = how === 'dim' ? act(d, 'off') : pause === 'keep' ? null : act(d, 'on'); // a lamp on a plug can only go off, then on
+        else if (how === 'dim') p = dim === 0 ? act(d, 'off') : act(d, 'bri', dim);
+        else if (how === 'pause') p = pause === 'keep' ? null : pause === 'normal' ? act(d, 'bri', sv.bri || 100) : act(d, 'bri', pause);
+        if (p) p.catch(function () {});
+      });
+      if (how === 'restore') saved = {};
     });
   }
+  function followPlayback() {
+    clearTimeout(wTimer);
+    if (!cfg.watch || !cfg.watch.on) { if (watchState !== 'idle') { watchState = 'idle'; setLights('restore'); } return; }
+    if (isKids() && watchState === 'idle') return;
+    var raw = watchRaw(), now = Date.now();
+    if (raw !== rawNow) { rawNow = raw; rawSince = now; if (raw === 'paused') pausedAt = now; }
+    var held = now - rawSince, wait = 0;
+    if (watchState === 'idle') {
+      if (raw === 'playing') { if (held >= W_START) { watchState = 'playing'; setLights('dim'); } else wait = W_START - held; }
+    } else if (watchState === 'playing') {
+      if (raw === 'paused') { if (held >= W_SETTLE) { watchState = 'paused'; setLights('pause'); } else wait = W_SETTLE - held; } // a quick pause to skip doesn't flash the lights
+      else if (raw === 'idle') { if (held >= W_END) { watchState = 'idle'; setLights('restore'); } else wait = W_END - held; }
+    } else if (watchState === 'paused') {
+      if (raw === 'playing') { watchState = 'playing'; setLights('dim'); }
+      else if (raw === 'idle' && held >= W_END) { watchState = 'idle'; setLights('restore'); }
+      else if (now - pausedAt >= W_LONG_PAUSE) { watchState = 'idle'; setLights('restore'); }
+      else wait = raw === 'idle' ? W_END - held : W_LONG_PAUSE - (now - pausedAt);
+    }
+    // Once paused, check back even if nothing else happens: a long pause, or the app closing, ends watching.
+    if (!wait && watchState === 'paused') wait = Math.max(1000, raw === 'idle' ? W_END - held : W_LONG_PAUSE - (now - pausedAt));
+    if (wait > 0) wTimer = setTimeout(followPlayback, wait + 250);
+  }
+  function watchStatus() { return watchState === 'idle' ? '' : watchState === 'playing' ? 'Lights dimmed for what you’re watching' : 'Paused: lights brighter'; }
 
   /* ---------- doorbell (watched natively, so it works over other apps) ---------- */
   function applyDoorbell() {
@@ -2683,7 +2716,7 @@ var Home = (function () {
   devices = Store.get('homeCache', null) || [];
   setTimeout(applyDoorbell, 3000);
   return { P: P, cfg: function () { return cfg; }, save: save, load: load, devices: function () { return devices; }, byId: byId, act: act, favs: favs, lights: lights, allLightsOff: allLightsOff,
-    valueText: valueText, command: command, connected: connected, providers: providers, status: function () { return last; }, followPlayback: followPlayback, statusLine: statusLine,
+    valueText: valueText, command: command, connected: connected, providers: providers, status: function () { return last; }, followPlayback: followPlayback, watchStatus: watchStatus, statusLine: statusLine,
     applyConfig: applyConfig, forget: forget, hueDiscover: hueDiscover, huePair: huePair, find: find, isLocal: isLocal };
 })();
 
@@ -2758,6 +2791,22 @@ var HICON = {
   scene: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 3l2.4 5.6L20 9.3l-4.4 3.9 1.3 5.8L12 16l-4.9 3 1.3-5.8L4 9.3l5.6-.7z"/></svg>',
   alarm: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/></svg>'
 };
+function watchLightPicker(at) {
+  Home.load().then(function (devs) {
+    var c = Home.cfg(); c.watch = Object.assign({ on: true, dim: 20, pause: 50, lights: [] }, c.watch || {});
+    var wl = c.watch.lights, ls = devs.filter(function (d) { return d.kind === 'light'; }).concat(devs.filter(function (d) { return d.kind === 'switch'; }));
+    if (!ls.length) { toast(Home.connected() ? 'No lights found yet' : 'Connect your lights first: Settings, Smart home'); return; }
+    var items = ls.slice(0, 30).map(function (d, i) {
+      var on = wl.indexOf(d.id) >= 0;
+      return { label: (on ? '✓  ' : '      ') + d.name + (d.room ? ' · ' + d.room : '') + (d.kind === 'switch' ? ' (plug)' : ''), fn: function () {
+        var j = wl.indexOf(d.id); if (j >= 0) wl.splice(j, 1); else wl.push(d.id); Home.save(); watchLightPicker(i);
+      } };
+    });
+    items.push({ label: 'Done', fn: function () { ['hWatch', 'hWatchLights'].forEach(function (id) { var el = document.querySelector('.row[data-row="' + id + '"]'); if (el) refreshRowEl(el); }); if (wl.length) toast(wl.length + (wl.length === 1 ? ' light follows' : ' lights follow') + ' what you watch'); } });
+    openMenu('Lights to dim', 'They dim when a film starts and go back after', items);
+    var el = $('menuItems').children[Math.min(at || 0, items.length - 1)]; if (el) setFocus(el);
+  });
+}
 function homeDeviceAct(d, el) {
   if (!d) return;
   if (d.kind === 'climate') { homeDeviceMenu(d); return; }
@@ -3420,12 +3469,15 @@ var ROW = {
   hShelly: { label: 'Add a Shelly', type: 'text', ph: '192.168.1.40', fmt: function () { var n = (Home.cfg().shelly || []).length; return n ? n + ' added' : ''; }, value: function () { return ''; },
     help: 'Type the plug’s IP address from the Shelly app. Leave it empty and press OK to remove them all.',
     commit: function (v, el) { var c = Home.cfg(); v = v.trim(); if (!v) c.shelly = []; else if (/^\d{1,3}(\.\d{1,3}){3}$/.test(v)) { c.shelly = (c.shelly || []).filter(function (x) { return x !== v; }).concat([v]); toast('Shelly added'); } else toast('That isn’t an IP address'); Home.save(); setFocus(refreshRowEl(el)); } },
-  hWatch: { label: 'Lights follow what you watch', type: 'action', fmt: function () { var w = Home.cfg().watch; return w && w.on ? ((w.lights || []).length ? (w.lights.length + (w.lights.length === 1 ? ' light' : ' lights')) : 'Choose lights') : 'Off'; },
-    hint: 'Dim when a film starts, brighter when you pause, back after',
-    help: 'Pick the lights in Your devices: ☰ on a light, Dim for films. Works with films and episodes, not music.',
-    run: function () { var c = Home.cfg(); c.watch = Object.assign({ dim: 20, pause: 50, lights: [] }, c.watch || {}); c.watch.on = !c.watch.on; Home.save(); if (c.watch.on && !c.watch.lights.length) toast('Now choose lights: Your devices, ☰ on a light'); } },
-  hDim: { label: 'Film brightness', type: 'action', fmt: function () { var w = Home.cfg().watch || {}; return (w.dim != null ? w.dim : 20) + '%'; },
-    run: function () { var c = Home.cfg(), vals = [0, 10, 20, 30, 40]; c.watch = Object.assign({ on: false, pause: 50, lights: [] }, c.watch || {}); var i = vals.indexOf(c.watch.dim); c.watch.dim = vals[(i + 1) % vals.length]; Home.save(); } },
+  hWatch: { label: 'Lights follow what you watch', type: 'action', fmt: function () { var w = Home.cfg().watch; return w && w.on ? ((w.lights || []).length ? 'On · ' + w.lights.length + (w.lights.length === 1 ? ' light' : ' lights') : 'Choose lights') : 'Off'; },
+    hint: 'Dims when a film or episode starts, puts them back when you stop',
+    help: 'Starts after about 15 seconds of playing, so previews and trailers don’t count. Ends 2 minutes after it stops (so the next episode doesn’t flash the lights), after 15 minutes paused, or when the credits roll. Lights go back exactly as they were. Works with films and episodes in any app that shows in Now playing, and in Watch.',
+    run: function () { var c = Home.cfg(); c.watch = Object.assign({ dim: 20, pause: 50, lights: [] }, c.watch || {}); c.watch.on = !c.watch.on; Home.save(); Home.followPlayback(); if (c.watch.on && !c.watch.lights.length) watchLightPicker(0); } },
+  hWatchLights: { label: 'Lights to dim', type: 'action', fmt: function () { var w = Home.cfg().watch || {}, n = (w.lights || []).length; return n ? n + (n === 1 ? ' light' : ' lights') : 'None yet'; }, run: function () { watchLightPicker(0); } },
+  hDim: { label: 'While watching', type: 'action', fmt: function () { var w = Home.cfg().watch || {}, d = w.dim != null ? w.dim : 20; return d === 0 ? 'Lights off' : 'Dim to ' + d + '%'; },
+    run: function () { var c = Home.cfg(), vals = [20, 10, 0, 40, 30]; c.watch = Object.assign({ on: false, pause: 50, lights: [] }, c.watch || {}); var i = vals.indexOf(c.watch.dim != null ? c.watch.dim : 20); c.watch.dim = vals[(i + 1) % vals.length]; Home.save(); } },
+  hPause: { label: 'When you pause', type: 'action', fmt: function () { var p = (Home.cfg().watch || {}).pause; return p === 'keep' ? 'Stay as they are' : p === 'normal' ? 'Back to normal' : 'Brighter (' + (p || 50) + '%)'; },
+    run: function () { var c = Home.cfg(), vals = [50, 'normal', 'keep']; c.watch = Object.assign({ on: false, dim: 20, lights: [] }, c.watch || {}); var i = vals.indexOf(c.watch.pause == null ? 50 : c.watch.pause); c.watch.pause = vals[(i + 1) % vals.length]; Home.save(); } },
   hDoorbell: { label: 'Doorbell', type: 'action', fmt: function () { var d = Home.cfg().doorbell; return d && d.entity ? d.entity.split('.')[1].replace(/_/g, ' ') : (Home.P.ha.ready() ? 'Choose' : 'Needs Home Assistant'); },
     hint: 'A card with the camera over whatever is playing', run: function () { doorbellFlow(); } },
   homeStatus: { label: 'Home on the ambient screen', type: 'bool', key: 'homeStatus', hint: 'Unlocked doors, heating, lights left on' },
@@ -3521,7 +3573,7 @@ var SECTIONS = [
   { id: 'home', name: 'Home screen', blurb: 'What you see when you open ' + BRAND + '.', rows: ['homeKey', 'sleep', 'picksOn', 'refresh', 'journal', 'journalView', 'clearJournal', 'sort', 'hidden', 'clock24'] },
   { id: 'ambient', name: 'Ambient', blurb: 'What the TV shows when nobody’s using it.', rows: ['ambPreview', 'scene', 'ambientMins', 'ambClock', 'ambientNp', 'dailyNote', 'wordOfDay', 'seasonal', 'morningAt', 'breathe', 'nightDim', 'burnin'] },
   { id: 'cleo', name: BRAND, blurb: 'How ' + BRAND + ' talks to you on this TV.', rows: ['tone', 'speak', 'speechRate', 'breakNudge', 'privateTv', 'clearChat'] },
-  { id: 'smarthome', name: 'Smart home', blurb: 'Lights, heating and the doorbell, from the TV.', rows: ['hConn', 'hKeys', 'hHaUrl', 'hHue', 'hShelly', 'hWatch', 'hDim', 'hDoorbell', 'doorbellPause', 'homeStatus', 'hForget'] },
+  { id: 'smarthome', name: 'Smart home', blurb: 'Lights, heating and the doorbell, from the TV.', rows: ['hConn', 'hKeys', 'hHaUrl', 'hHue', 'hShelly', 'hWatch', 'hWatchLights', 'hDim', 'hPause', 'hDoorbell', 'doorbellPause', 'homeStatus', 'hForget'] },
   { id: 'vis', name: 'Viewing info', blurb: 'What ' + BRAND + ' learns from what you watch, and what you can do about it.', rows: ['visOn', 'visKnows', 'visSync', 'smartFavs'] },
   { id: 'phone', name: 'Phone link', blurb: 'Calls and messages from your phone, on the TV.', rows: ['phoneLink', 'phonePreview', 'callPause', 'filmDnd', 'btCheck'] },
   { id: 'weather', name: 'Weather', blurb: 'For the clock, ambient mode and picks.', rows: ['location', 'units'] },
