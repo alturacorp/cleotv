@@ -9,7 +9,7 @@
 @font-face { font-family: "Figtree"; src: url("fonts/Figtree.ttf") format("truetype"); font-weight: 200 900; font-display: swap; }
 
 /* 1rem = 10 design px on a 1280-wide layout, so 720p and 1080p WebViews look identical. */
-html { font-size: calc(100vw / 128); }
+html { font-size: calc(100vw / 128); font-size: min(calc(100vw / 128), calc(100vh / 72)); } /* a 16:9 canvas that also fits wider phone screens */
 :root {
   --bg: #100f0d;
   --bg-2: #171512;
@@ -296,6 +296,7 @@ body.thinking .composer { animation: ringmove 2.4s linear infinite; }
 /* Setup */
 #setup .step { position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; transition: opacity .45s var(--ease); }
 #setup .step.on { opacity: 1; pointer-events: auto; }
+.pane:not(.on), .pane:not(.on) * { pointer-events: none !important; } /* closed panels never catch taps */
 .center { position: absolute; left: 0; right: 0; top: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0 10rem; }
 .center .star { font-size: 7.2rem; }
 .center h1, .split h1 { margin: 2.4rem 0 0; font: 500 5rem/1.1 "Lora", Georgia, serif; letter-spacing: -.015em; }
@@ -392,6 +393,10 @@ body.lite #cc, body.reduce #cc { background: #1b1916; -webkit-backdrop-filter: n
 .clock.focused { border-radius: 99rem; box-shadow: 0 0 0 .25rem var(--ink); padding: 0 1rem; }
 /* Frosted menus where the stick can afford it */
 body:not(.lite):not(.reduce) .modal { background: rgba(28,26,23,.78); -webkit-backdrop-filter: blur(2rem) saturate(1.3); backdrop-filter: blur(2rem) saturate(1.3); }
+/* Back button for touch screens (preview only) */
+#rotateHint { display: none; }
+@media (orientation: portrait) { #rotateHint { display: block; pointer-events: none; position: fixed; left: 0; right: 0; top: 0; z-index: 61; padding: 3rem 4rem; text-align: center; font-size: 4rem; line-height: 1.3; color: var(--ink); background: rgba(16,15,13,.94); } }
+#touchBack { position: fixed; left: 1.6rem; bottom: 1.6rem; z-index: 60; padding: 1rem 1.8rem; border-radius: 99rem; background: rgba(40,37,33,.9); color: var(--ink); font-size: 1.6rem; font-weight: 600; box-shadow: 0 .6rem 1.6rem rgba(0,0,0,.4); }
 /* Cleo Home */
 #housePane { z-index: 34; }
 .hwrap { position: absolute; left: 7rem; right: 7rem; top: 6rem; bottom: 4rem; overflow-y: auto; scrollbar-width: none; }
@@ -899,7 +904,7 @@ function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function
 function hash(s) { var h = 0; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); }
 function pad(n) { return (n < 10 ? '0' : '') + n; }
 function cssEsc(s) { return String(s).replace(/["\\]/g, '\\$&'); }
-function remPx() { return innerWidth / 128; }
+function remPx() { return Math.min(innerWidth / 128, innerHeight / 72); }
 var toastTimer;
 function toast(msg) { var t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove('on'); }, 2800); }
 function iconUrl(kind, pkg) { return Native ? '/icon/' + kind + '/' + encodeURIComponent(pkg) : ''; }
@@ -3887,6 +3892,38 @@ document.addEventListener('keydown', function (e) {
   if (e.keyCode === 82 || e.key === 'ContextMenu' || e.key === 'm') { e.preventDefault(); options(focused); return; }
   if (e.key === 'Escape' || e.key === 'Backspace' || e.keyCode === 4) { e.preventDefault(); back(); }
 });
+/* ---------- Touch and mouse, for trying Cleo TV on a phone or computer (the TV itself uses the remote) ---------- */
+(function () {
+  var pressTimer = 0, pressed = null, longDone = false;
+  function target(e) { var el = e.target && e.target.closest ? e.target.closest('[data-focus]') : null; return el && el.offsetParent !== null ? el : null; }
+  document.addEventListener('pointerdown', function (e) {
+    wake(); resetIdle();
+    if (Amb.isOn()) { e.preventDefault(); exitAmbient(); return; }
+    var el = target(e); if (!el) return;
+    pressed = el; longDone = false; clearTimeout(pressTimer);
+    pressTimer = setTimeout(function () { longDone = true; setFocus(el); options(el); }, 650); // hold = ☰ options
+  });
+  document.addEventListener('pointerup', function () { clearTimeout(pressTimer); });
+  document.addEventListener('pointercancel', function () { clearTimeout(pressTimer); pressed = null; });
+  document.addEventListener('click', function (e) {
+    var el = target(e);
+    if (!el || el !== pressed || longDone) { pressed = null; return; }
+    pressed = null;
+    if (e.target.tagName === 'INPUT') { setFocus(el); return; } // let the keyboard open
+    e.preventDefault();
+    // Something inside a scope that isn't open (like the home screen behind a panel) isn't tappable.
+    var root = scopeRoot(); if (root && !root.contains(el)) return;
+    setFocus(el); activate(el);
+  });
+  // A Back button that only appears on touch screens, since phones have no remote.
+  if (!Native && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
+    var hint = document.createElement('div'); hint.id = 'rotateHint'; hint.textContent = 'Cleo TV is made for a wide screen. Turn your phone sideways.';
+    document.body.appendChild(hint);
+    var b = document.createElement('div'); b.id = 'touchBack'; b.textContent = '‹ Back';
+    b.addEventListener('click', function (e) { e.stopPropagation(); back(); });
+    document.body.appendChild(b);
+  }
+})();
 document.addEventListener('keyup', function (e) {
   if (!isOk(e) || !okDown) return;
   okDown = false; clearTimeout(holdTimer);
