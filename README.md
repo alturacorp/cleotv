@@ -170,7 +170,12 @@ Settings → **Smart home**, then everything appears in Control Center (☰) and
 Keys typed on cleo.ac are encrypted in the browser for this TV (the TV publishes its own public key when it's linked to Cleo ID), so Cleo's server can't read them. They're stored only on the TV.
 
 - **Chat**: *turn off the lamp*, *dim the bedroom lights to 30%*, *set the heating to 21*, *turn on movie night*, *turn everything off*. These are handled on the TV and never sent to Cleo. Locks and alarms always ask on screen first.
-- **Lights that follow what you watch**: in Your devices, ☰ on a light → *Dim for films*, then turn on *Lights follow what you watch*. They dim when a film or episode plays, come up a bit when you pause, and go back afterwards.
+- **Lights that follow what you watch** (Settings → Smart home): turn it on and tick the lights in *Lights to dim* (or ☰ on a light → *Dim for films*).
+  - **Starts** after about 15 seconds of a film or episode playing, so trailers and the previews Netflix autoplays while you browse don't count.
+  - **While watching:** dim to 10–40%, or *Lights off*. Lamps on smart plugs switch off (they can't dim).
+  - **When you pause** (for more than a few seconds, so skipping doesn't flash them): brighter (50%), back to normal, or stay as they are.
+  - **Ends** 2 minutes after nothing is playing (so autoplaying the next episode doesn't bring the lights up), when the credits roll (the last minute of a film), or after 15 minutes paused. Every light goes back exactly as it was; lights that were off stay off.
+  - Works with anything that shows in Now playing (needs the Now playing adb step) and with Cleo's own YouTube player. Music doesn't count. Off on kids profiles.
 - **Doorbell** (Home Assistant): choose the doorbell entity and a camera. When it rings, a card with a snapshot appears over whatever is playing (watched natively every 2 s on your network). Optionally it also pauses playback.
 - **Kids' bedtime**: ☰ on a light → *Turn off at kids' bedtime*.
 - **Ambient**: optional status line (unlocked doors, heating, lights left on).
