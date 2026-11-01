@@ -1,0 +1,70 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Version comes from CI (run number) so every build installs over the last one.
+def ciBuild = (System.getenv('GITHUB_RUN_NUMBER') ?: '1').toInteger()
+
+android {
+    namespace 'app.iole.tv'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'app.iole.tv'
+        minSdk 25          // Fire OS 6 (Android 7.1) and newer
+        targetSdk 34
+        versionCode ciBuild
+        versionName "1.1.${ciBuild}"
+        // Where Cleo looks for updates: the GitHub repo that built it (owner/name), and this build's number.
+        buildConfigField 'String', 'UPDATE_REPO', "\"${System.getenv('GITHUB_REPOSITORY') ?: ''}\""
+        buildConfigField 'int', 'BUILD_NUMBER', "${ciBuild}"
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    signingConfigs {
+        // Use your own key from GitHub secrets if set; otherwise the shared key in /signing,
+        // which keeps the signature stable so updates install over the top.
+        lume {
+            def ks = System.getenv('LUME_KEYSTORE_PATH')
+            if (ks) {
+                storeFile file(ks)
+                storePassword System.getenv('LUME_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('LUME_KEY_ALIAS')
+                keyPassword System.getenv('LUME_KEY_PASSWORD')
+            } else {
+                storeFile rootProject.file('signing/lume-tv.keystore')
+                storePassword 'lumetv-sideload'
+                keyAlias 'lumetv'
+                keyPassword 'lumetv-sideload'
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.lume
+        }
+        debug {
+            signingConfig signingConfigs.lume
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.11.0'
+    implementation 'androidx.core:core:1.12.0' // FileProvider, to hand a downloaded update to the installer
+}
