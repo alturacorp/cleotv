@@ -127,6 +127,34 @@ body.kids .tab[data-view="search"] { display: none; }
 #splash.go .sp-text { opacity: 1; transform: translateY(0); }
 body.reduce #splash .sp-star, body.reduce #splash .sp-text { transition-duration: .01s; }
 
+
+/* ---------- Show on TV: things sent from cleo.ac ---------- */
+#showPane { z-index: 38; overflow: hidden; }
+#showPane > * { z-index: 2; } #showPane > #showBlur, #showPane > #showPic { z-index: 0; }
+#showBlur { position: absolute; left: -4rem; top: -4rem; right: -4rem; bottom: -4rem; background-size: cover; background-position: center; filter: blur(4rem) saturate(1.2); opacity: .32; }
+#showPane::after { content: ""; position: absolute; left: 0; top: 0; right: 0; bottom: 0; background: linear-gradient(90deg, rgba(16,15,13,.92), rgba(16,15,13,.6)); pointer-events: none; z-index: 1; }
+#showPic { position: absolute; left: 6rem; top: 7rem; width: 56rem; height: 52rem; border-radius: 1.8rem; background-size: contain; background-repeat: no-repeat; background-position: center; display: none; transition: background-image .4s; }
+#showDots { position: absolute; left: 6rem; width: 56rem; top: 61rem; text-align: center; }
+#showDots i { display: inline-block; width: .8rem; height: .8rem; border-radius: 50%; margin: 0 .5rem; background: rgba(255,255,255,.25); }
+#showDots i.on { background: var(--ink); }
+#showMain { position: absolute; left: 9rem; right: 9rem; top: 7rem; bottom: 6rem; display: flex; flex-direction: column; }
+#showFrom { font-size: 1.3rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+#showTitle { margin: 1rem 0 2rem; font: 500 4.2rem/1.12 "Lora", Georgia, serif; letter-spacing: -.01em; }
+#showWords { flex: 1; overflow: hidden; position: relative; -webkit-mask: linear-gradient(#000 85%, transparent); mask: linear-gradient(#000 85%, transparent); }
+#showText { transition: transform .35s var(--ease); font-size: 2.1rem; line-height: 1.55; color: #e6e1d8; max-width: 92rem; }
+#showText p { margin: 0 0 1.2rem; } #showText h3 { margin: 2.2rem 0 1rem; font: 500 2.6rem "Lora", Georgia, serif; color: var(--ink); }
+#showText ul, #showText ol { margin: 0 0 1.4rem; padding-left: 3rem; } #showText li { margin: 0 0 .7rem; }
+#showBtns { display: flex; margin-top: 2rem; } #showBtns .btn { margin-right: 1.4rem; }
+#showPane.both #showPic, #showPane.pics #showPic { display: block; }
+#showPane.both #showMain { left: 68rem; right: 6rem; }
+#showPane.pics #showPic { left: 0; top: 0; width: 100%; height: 100%; border-radius: 0; }
+#showPane.pics::after { background: linear-gradient(transparent 62%, rgba(16,15,13,.88)); }
+#showPane.pics #showMain { top: auto; bottom: 5rem; left: 7rem; right: 7rem; }
+#showPane.pics #showTitle { font-size: 3rem; margin-bottom: .8rem; } #showPane.pics #showWords { flex: none; max-height: 6.4rem; -webkit-mask: none; mask: none; } #showPane.pics #showText { font-size: 1.8rem; color: #d9d4cb; }
+#showPane.pics #showDots { left: 0; width: 100%; top: auto; bottom: 2rem; }
+.msg.note { font-size: 1.4rem; letter-spacing: .04em; color: var(--ink-3); text-align: center; max-width: none; }
+.chip.ho { box-shadow: inset 0 0 0 .15rem rgba(167,139,250,.55); }
+
 /* ---------- Watch ---------- */
 body[data-view="watch"] #watch { opacity: 1; pointer-events: auto; }
 body.kids .tab[data-view="watch"] { display: none; }
@@ -891,6 +919,10 @@ body.reduce *, body.reduce *::before, body.reduce *::after { animation: none !im
   </div>
 </section>
 
+<section class="pane" id="showPane" role="dialog" aria-label="Shown from your phone">
+  <div id="showBlur"></div><div id="showPic"></div><div id="showDots"></div>
+  <div id="showMain"><div id="showFrom"></div><h1 id="showTitle"></h1><div id="showWords"><div id="showText"></div></div><div id="showBtns"></div></div>
+</section>
 <section class="pane" id="ytPane" role="dialog" aria-label="YouTube" data-state="card">
   <div class="tart" id="ytArt"></div>
   <div class="tinfo" id="ytCard"><div class="kicker">YouTube</div><h1 id="ytTitle"></h1><div class="tmeta" id="ytMeta"></div><p class="tdesc" id="ytDesc"></p><div class="twhere" id="ytNote"></div><div class="tbtns" id="ytBtns"></div></div>
@@ -968,7 +1000,7 @@ var defaults = { name: '', worker: DEFAULT_WORKER, location: null, clock24: true
   sort: 'az', picksOn: true, tone: 'balanced', units: 'c', pin: '', consentAt: '',
   perf: 'auto', scene: 'auto', ambClock: 'large', dailyNote: true, seasonal: true, breathe: false, nightDim: 60, morningAt: '',
   speak: false, speechRate: 'normal', sounds: true, breakNudge: 0, wordOfDay: true, homeStatus: false, smartFavs: true,
-  phoneLink: true, phonePreview: false, callPause: true, filmDnd: false, doorbellPause: false };
+  phoneLink: true, phonePreview: false, callPause: true, filmDnd: false, doorbellPause: false, handoff: true };
 var settings = Object.assign({}, defaults, Store.get('settings', {}));
 if (!settings.worker) settings.worker = DEFAULT_WORKER;
 settings.bedtime = settings.bedtime || '19:30';
@@ -2296,6 +2328,10 @@ function screenContext(info) {
   return '\n' + lines.join('\n');
 }
 function screenContextFor(text) {
+  var sr = Show.recent();
+  if (sr && (SCREEN_Q.test(text) || /\b(this|that|it|recipe|step|ingredients?|photos?|pictures?|card|what I (just )?(sent|put))\b/i.test(text))) {
+    return Promise.resolve('\nJust shown on the TV from ' + sr.from + ': "' + sr.title + '".' + (sr.text ? ' What it says:\n' + String(sr.text).slice(0, 2500) : '') + (sr.images && sr.images.length ? '\n(' + sr.images.length + ' picture' + (sr.images.length === 1 ? '' : 's') + ', which you can’t see.)' : ''));
+  }
   var yr = Yt.recent();
   if (yr && !npIsVideo() && (SCREEN_Q.test(text) || /\b(video|clip|youtube|channel)\b/i.test(text))) {
     var mm = function (s) { return Math.round(s / 60); };
@@ -2612,28 +2648,61 @@ var Home = (function () {
     return null;
   }
 
-  /* ---------- lights that follow what you're watching ---------- */
-  var watchState = 'idle', saved = {};
+  /* ---------- lights that follow what you're watching ----------
+     Watching starts when a film or episode has been playing for a little while (so trailers and the previews that
+     autoplay while you browse Netflix don't dim the room) and ends when nothing has played for a couple of minutes
+     (so the next episode doesn't flash the lights up), when it's been paused a long time, or when it reaches the end.
+     At the end every light goes back exactly as it was. */
+  var watchState = 'idle', saved = {}, rawSince = 0, rawNow = 'idle', pausedAt = 0, wTimer = 0;
+  var W_START = 15000, W_END = 120000, W_LONG_PAUSE = 15 * 60000, W_SETTLE = 4000;
   function watchLights() { var ids = (cfg.watch && cfg.watch.lights) || []; return ids.map(byId).filter(Boolean); }
-  function followPlayback() {
-    if (!cfg.watch || !cfg.watch.on || isKids()) return;
-    var yt = typeof Yt !== 'undefined' && Yt.active(), vid = yt || npIsVideo(), on = yt ? Yt.isPlaying() : np && np.playing;
-    var now = vid && on ? 'playing' : vid ? 'paused' : 'idle';
-    if (now === watchState) return;
-    var prev = watchState; watchState = now;
-    load().then(function () {
+  function watchRaw() {
+    var yt = typeof Yt !== 'undefined' && Yt.active(), vid = yt || npIsVideo(), on = yt ? Yt.isPlaying() : !!(np && np.playing);
+    // The last minute of a film is credits: count it as finished, so the lights come up as they roll.
+    if (vid && !yt && np && np.duration > 20 * 60000 && np.position > np.duration - 60000) return 'idle';
+    return vid && on ? 'playing' : vid ? 'paused' : 'idle';
+  }
+  function setLights(how) {
+    return load(how === 'dim').then(function () {
       var ls = watchLights(); if (!ls.length) return;
-      if (now === 'playing') {
-        if (prev === 'idle') ls.forEach(function (d) { saved[d.id] = { on: d.on, bri: d.bri }; });
-        ls.forEach(function (d) { if (saved[d.id] && saved[d.id].on !== false) act(d, 'bri', cfg.watch.dim != null ? cfg.watch.dim : 20).catch(function () {}); });
-      } else if (now === 'paused') {
-        ls.forEach(function (d) { if (saved[d.id] && saved[d.id].on !== false) act(d, 'bri', cfg.watch.pause || 50).catch(function () {}); });
-      } else {
-        ls.forEach(function (d) { var s = saved[d.id]; if (!s) return; (s.on === false ? act(d, 'off') : act(d, 'bri', s.bri || 100)).catch(function () {}); });
-        saved = {};
-      }
+      var w = cfg.watch, dim = w.dim != null ? w.dim : 20, pause = w.pause == null ? 50 : w.pause;
+      if (how === 'dim') ls.forEach(function (d) { if (!saved[d.id]) saved[d.id] = { on: d.on, bri: d.bri }; });
+      ls.forEach(function (d) {
+        var sv = saved[d.id]; if (!sv) return;
+        var p;
+        if (how === 'restore') p = sv.on === false ? act(d, 'off') : d.kind === 'switch' ? act(d, 'on') : act(d, 'bri', sv.bri || 100);
+        else if (sv.on === false) return; // a light that was off stays off
+        else if (d.kind === 'switch') p = how === 'dim' ? act(d, 'off') : pause === 'keep' ? null : act(d, 'on'); // a lamp on a plug can only go off, then on
+        else if (how === 'dim') p = dim === 0 ? act(d, 'off') : act(d, 'bri', dim);
+        else if (how === 'pause') p = pause === 'keep' ? null : pause === 'normal' ? act(d, 'bri', sv.bri || 100) : act(d, 'bri', pause);
+        if (p) p.catch(function () {});
+      });
+      if (how === 'restore') saved = {};
     });
   }
+  function followPlayback() {
+    clearTimeout(wTimer);
+    if (!cfg.watch || !cfg.watch.on) { if (watchState !== 'idle') { watchState = 'idle'; setLights('restore'); } return; }
+    if (isKids() && watchState === 'idle') return;
+    var raw = watchRaw(), now = Date.now();
+    if (raw !== rawNow) { rawNow = raw; rawSince = now; if (raw === 'paused') pausedAt = now; }
+    var held = now - rawSince, wait = 0;
+    if (watchState === 'idle') {
+      if (raw === 'playing') { if (held >= W_START) { watchState = 'playing'; setLights('dim'); } else wait = W_START - held; }
+    } else if (watchState === 'playing') {
+      if (raw === 'paused') { if (held >= W_SETTLE) { watchState = 'paused'; setLights('pause'); } else wait = W_SETTLE - held; } // a quick pause to skip doesn't flash the lights
+      else if (raw === 'idle') { if (held >= W_END) { watchState = 'idle'; setLights('restore'); } else wait = W_END - held; }
+    } else if (watchState === 'paused') {
+      if (raw === 'playing') { watchState = 'playing'; setLights('dim'); }
+      else if (raw === 'idle' && held >= W_END) { watchState = 'idle'; setLights('restore'); }
+      else if (now - pausedAt >= W_LONG_PAUSE) { watchState = 'idle'; setLights('restore'); }
+      else wait = raw === 'idle' ? W_END - held : W_LONG_PAUSE - (now - pausedAt);
+    }
+    // Once paused, check back even if nothing else happens: a long pause, or the app closing, ends watching.
+    if (!wait && watchState === 'paused') wait = Math.max(1000, raw === 'idle' ? W_END - held : W_LONG_PAUSE - (now - pausedAt));
+    if (wait > 0) wTimer = setTimeout(followPlayback, wait + 250);
+  }
+  function watchStatus() { return watchState === 'idle' ? '' : watchState === 'playing' ? 'Lights dimmed for what you’re watching' : 'Paused: lights brighter'; }
 
   /* ---------- doorbell (watched natively, so it works over other apps) ---------- */
   function applyDoorbell() {
@@ -2683,7 +2752,7 @@ var Home = (function () {
   devices = Store.get('homeCache', null) || [];
   setTimeout(applyDoorbell, 3000);
   return { P: P, cfg: function () { return cfg; }, save: save, load: load, devices: function () { return devices; }, byId: byId, act: act, favs: favs, lights: lights, allLightsOff: allLightsOff,
-    valueText: valueText, command: command, connected: connected, providers: providers, status: function () { return last; }, followPlayback: followPlayback, statusLine: statusLine,
+    valueText: valueText, command: command, connected: connected, providers: providers, status: function () { return last; }, followPlayback: followPlayback, watchStatus: watchStatus, statusLine: statusLine,
     applyConfig: applyConfig, forget: forget, hueDiscover: hueDiscover, huePair: huePair, find: find, isLocal: isLocal };
 })();
 
@@ -2758,6 +2827,22 @@ var HICON = {
   scene: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 3l2.4 5.6L20 9.3l-4.4 3.9 1.3 5.8L12 16l-4.9 3 1.3-5.8L4 9.3l5.6-.7z"/></svg>',
   alarm: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/></svg>'
 };
+function watchLightPicker(at) {
+  Home.load().then(function (devs) {
+    var c = Home.cfg(); c.watch = Object.assign({ on: true, dim: 20, pause: 50, lights: [] }, c.watch || {});
+    var wl = c.watch.lights, ls = devs.filter(function (d) { return d.kind === 'light'; }).concat(devs.filter(function (d) { return d.kind === 'switch'; }));
+    if (!ls.length) { toast(Home.connected() ? 'No lights found yet' : 'Connect your lights first: Settings, Smart home'); return; }
+    var items = ls.slice(0, 30).map(function (d, i) {
+      var on = wl.indexOf(d.id) >= 0;
+      return { label: (on ? '✓  ' : '      ') + d.name + (d.room ? ' · ' + d.room : '') + (d.kind === 'switch' ? ' (plug)' : ''), fn: function () {
+        var j = wl.indexOf(d.id); if (j >= 0) wl.splice(j, 1); else wl.push(d.id); Home.save(); watchLightPicker(i);
+      } };
+    });
+    items.push({ label: 'Done', fn: function () { ['hWatch', 'hWatchLights'].forEach(function (id) { var el = document.querySelector('.row[data-row="' + id + '"]'); if (el) refreshRowEl(el); }); if (wl.length) toast(wl.length + (wl.length === 1 ? ' light follows' : ' lights follow') + ' what you watch'); } });
+    openMenu('Lights to dim', 'They dim when a film starts and go back after', items);
+    var el = $('menuItems').children[Math.min(at || 0, items.length - 1)]; if (el) setFocus(el);
+  });
+}
 function homeDeviceAct(d, el) {
   if (!d) return;
   if (d.kind === 'climate') { homeDeviceMenu(d); return; }
@@ -3107,7 +3192,7 @@ function openPick(i) {
 var focused = null, scope = 'home', view = 'home', lastFocus = {};
 function scopeRoot() {
   if (scope === 'menu') return $('menu'); if (scope === 'settings') return $('settingsPane'); if (scope === 'chat') return $('chat');
-  if (scope === 'pin') return $('pinPane'); if (scope === 'link') return $('linkPane'); if (scope === 'who') return $('whoPane'); if (scope === 'journal') return $('journalPane'); if (scope === 'title') return $('titlePane'); if (scope === 'yt') return $('ytPane'); if (scope === 'photo') return $('photoPane'); if (scope === 'cc') return $('cc'); if (scope === 'house') return $('housePane'); if (scope === 'knows') return $('knowsPane'); if (scope === 'setup') return setupStepEl(setupState.step);
+  if (scope === 'pin') return $('pinPane'); if (scope === 'link') return $('linkPane'); if (scope === 'who') return $('whoPane'); if (scope === 'journal') return $('journalPane'); if (scope === 'title') return $('titlePane'); if (scope === 'yt') return $('ytPane'); if (scope === 'show') return $('showPane'); if (scope === 'photo') return $('photoPane'); if (scope === 'cc') return $('cc'); if (scope === 'house') return $('housePane'); if (scope === 'knows') return $('knowsPane'); if (scope === 'setup') return setupStepEl(setupState.step);
   return null;
 }
 function focusables() {
@@ -3200,6 +3285,7 @@ function activate(el) {
   var k = el.getAttribute('data-kind');
   if (scope === 'title') { titleActivate(el); return; }
   if (scope === 'yt') { Yt.act(el); return; }
+  if (scope === 'show') { Show.act(el); return; }
   if (scope === 'photo') { Shared.toggleShow(); return; }
   if (scope === 'cc') { CC.act(el); return; }
   if (scope === 'knows') { Knows.act(el); return; }
@@ -3227,6 +3313,7 @@ function activate(el) {
   else if (k === 'sec') { var r = $('rows').querySelector('.row'); if (r) setFocus(r); }
   else if (k === 'composer') $('chatInput').focus();
   else if (k === 'speaktoggle') { settings.speak = !settings.speak; saveSettings(); if (!settings.speak) stopSpeaking(); renderSpeakToggle(); }
+  else if (k === 'hochip') { Handoff.carry(); }
   else if (k === 'chip') {
     var shown = /^Show (.+)$/.exec(el.textContent), cc = null;
     if (shown) for (var ci = chatLog.length - 1; ci >= 0 && !cc; ci--) if (chatLog[ci].card && chatLog[ci].card.type === 'title' && chatLog[ci].card.name === shown[1]) cc = chatLog[ci].card;
@@ -3395,6 +3482,7 @@ var ROW = {
     help: 'Shows a small card over whatever you’re watching. Never on a kids profile.' },
   phonePreview: { label: 'Show message text', type: 'bool', key: 'phonePreview', hint: 'Off: just “Message from Mum”. Others may be watching.' },
   callPause: { label: 'Pause for calls', type: 'bool', key: 'callPause', hint: 'Pauses what’s playing when a call comes in' },
+  handoff: { label: 'Hand-off', type: 'bool', key: 'handoff', hint: 'Carry chats on between this TV and your phone or computer, end-to-end encrypted' },
   filmDnd: { label: 'Do not disturb during films', type: 'bool', key: 'filmDnd', hint: 'Messages wait until you pause; calls still come through' },
   btCheck: { label: 'iPhone calls over Bluetooth', type: 'action', fmt: function () { var r = btResult(); return !r ? 'Check this stick' : r.possible ? 'Possible on this stick' : 'Not on this stick'; },
     help: 'iPhones only share calls with Bluetooth accessories (like watches). That needs a newer Android than most Fire TV sticks have; this checks yours. Messages from an iPhone work either way, with Shortcuts.',
@@ -3420,12 +3508,15 @@ var ROW = {
   hShelly: { label: 'Add a Shelly', type: 'text', ph: '192.168.1.40', fmt: function () { var n = (Home.cfg().shelly || []).length; return n ? n + ' added' : ''; }, value: function () { return ''; },
     help: 'Type the plug’s IP address from the Shelly app. Leave it empty and press OK to remove them all.',
     commit: function (v, el) { var c = Home.cfg(); v = v.trim(); if (!v) c.shelly = []; else if (/^\d{1,3}(\.\d{1,3}){3}$/.test(v)) { c.shelly = (c.shelly || []).filter(function (x) { return x !== v; }).concat([v]); toast('Shelly added'); } else toast('That isn’t an IP address'); Home.save(); setFocus(refreshRowEl(el)); } },
-  hWatch: { label: 'Lights follow what you watch', type: 'action', fmt: function () { var w = Home.cfg().watch; return w && w.on ? ((w.lights || []).length ? (w.lights.length + (w.lights.length === 1 ? ' light' : ' lights')) : 'Choose lights') : 'Off'; },
-    hint: 'Dim when a film starts, brighter when you pause, back after',
-    help: 'Pick the lights in Your devices: ☰ on a light, Dim for films. Works with films and episodes, not music.',
-    run: function () { var c = Home.cfg(); c.watch = Object.assign({ dim: 20, pause: 50, lights: [] }, c.watch || {}); c.watch.on = !c.watch.on; Home.save(); if (c.watch.on && !c.watch.lights.length) toast('Now choose lights: Your devices, ☰ on a light'); } },
-  hDim: { label: 'Film brightness', type: 'action', fmt: function () { var w = Home.cfg().watch || {}; return (w.dim != null ? w.dim : 20) + '%'; },
-    run: function () { var c = Home.cfg(), vals = [0, 10, 20, 30, 40]; c.watch = Object.assign({ on: false, pause: 50, lights: [] }, c.watch || {}); var i = vals.indexOf(c.watch.dim); c.watch.dim = vals[(i + 1) % vals.length]; Home.save(); } },
+  hWatch: { label: 'Lights follow what you watch', type: 'action', fmt: function () { var w = Home.cfg().watch; return w && w.on ? ((w.lights || []).length ? 'On · ' + w.lights.length + (w.lights.length === 1 ? ' light' : ' lights') : 'Choose lights') : 'Off'; },
+    hint: 'Dims when a film or episode starts, puts them back when you stop',
+    help: 'Starts after about 15 seconds of playing, so previews and trailers don’t count. Ends 2 minutes after it stops (so the next episode doesn’t flash the lights), after 15 minutes paused, or when the credits roll. Lights go back exactly as they were. Works with films and episodes in any app that shows in Now playing, and in Watch.',
+    run: function () { var c = Home.cfg(); c.watch = Object.assign({ dim: 20, pause: 50, lights: [] }, c.watch || {}); c.watch.on = !c.watch.on; Home.save(); Home.followPlayback(); if (c.watch.on && !c.watch.lights.length) watchLightPicker(0); } },
+  hWatchLights: { label: 'Lights to dim', type: 'action', fmt: function () { var w = Home.cfg().watch || {}, n = (w.lights || []).length; return n ? n + (n === 1 ? ' light' : ' lights') : 'None yet'; }, run: function () { watchLightPicker(0); } },
+  hDim: { label: 'While watching', type: 'action', fmt: function () { var w = Home.cfg().watch || {}, d = w.dim != null ? w.dim : 20; return d === 0 ? 'Lights off' : 'Dim to ' + d + '%'; },
+    run: function () { var c = Home.cfg(), vals = [20, 10, 0, 40, 30]; c.watch = Object.assign({ on: false, pause: 50, lights: [] }, c.watch || {}); var i = vals.indexOf(c.watch.dim != null ? c.watch.dim : 20); c.watch.dim = vals[(i + 1) % vals.length]; Home.save(); } },
+  hPause: { label: 'When you pause', type: 'action', fmt: function () { var p = (Home.cfg().watch || {}).pause; return p === 'keep' ? 'Stay as they are' : p === 'normal' ? 'Back to normal' : 'Brighter (' + (p || 50) + '%)'; },
+    run: function () { var c = Home.cfg(), vals = [50, 'normal', 'keep']; c.watch = Object.assign({ on: false, dim: 20, lights: [] }, c.watch || {}); var i = vals.indexOf(c.watch.pause == null ? 50 : c.watch.pause); c.watch.pause = vals[(i + 1) % vals.length]; Home.save(); } },
   hDoorbell: { label: 'Doorbell', type: 'action', fmt: function () { var d = Home.cfg().doorbell; return d && d.entity ? d.entity.split('.')[1].replace(/_/g, ' ') : (Home.P.ha.ready() ? 'Choose' : 'Needs Home Assistant'); },
     hint: 'A card with the camera over whatever is playing', run: function () { doorbellFlow(); } },
   homeStatus: { label: 'Home on the ambient screen', type: 'bool', key: 'homeStatus', hint: 'Unlocked doors, heating, lights left on' },
@@ -3493,6 +3584,7 @@ var ROW = {
   pRem: { label: 'Reminders', type: 'info', fmt: function () { return 'Stay on this TV'; } },
   pWeather2: { label: 'Weather backup', type: 'info', fmt: function () { return settings.location ? 'MET Norway, if Open-Meteo is down' : 'Not set'; }, hint: 'Only the town’s coordinates' },
   pShare: { label: 'Send to TV', type: 'info', fmt: function () { return 'Through ' + BRAND + ' servers, deleted once the TV has it'; }, hint: 'Links only open after someone at the TV says yes' },
+  pHo: { label: 'Hand-off and Show on TV', type: 'info', fmt: function () { return 'End-to-end encrypted between your devices'; }, hint: 'Sealed for this TV’s key on your phone or computer, and by this TV for theirs. ' + BRAND + '’s server only passes on sealed copies' },
   pYt: { label: 'YouTube in Watch', type: 'info', fmt: function () { return 'Searches go to Google through ' + BRAND + '’s server; videos play from YouTube'; }, hint: 'What you watch and follow stays on this TV. YouTube sees what it plays, under Google’s terms' },
   pWatch: { label: 'Continue Watching, ratings, journal', type: 'info', fmt: function () { return 'Stay on this TV'; }, hint: 'Ratings shape picks: only titles are sent' },
   pVoice: { label: 'Read aloud', type: 'info', fmt: function () { return 'The TV’s own voice, nothing sent'; } },
@@ -3520,13 +3612,13 @@ var SECTIONS = [
   { id: 'profile', name: 'Profile', blurb: 'Who this TV is set up for.', rows: ['name', 'profiles', 'addProfile', 'addKids', 'bedtime', 'cleoid', 'photos', 'lock', 'rerun'] },
   { id: 'home', name: 'Home screen', blurb: 'What you see when you open ' + BRAND + '.', rows: ['homeKey', 'sleep', 'picksOn', 'refresh', 'journal', 'journalView', 'clearJournal', 'sort', 'hidden', 'clock24'] },
   { id: 'ambient', name: 'Ambient', blurb: 'What the TV shows when nobody’s using it.', rows: ['ambPreview', 'scene', 'ambientMins', 'ambClock', 'ambientNp', 'dailyNote', 'wordOfDay', 'seasonal', 'morningAt', 'breathe', 'nightDim', 'burnin'] },
-  { id: 'cleo', name: BRAND, blurb: 'How ' + BRAND + ' talks to you on this TV.', rows: ['tone', 'speak', 'speechRate', 'breakNudge', 'privateTv', 'clearChat'] },
-  { id: 'smarthome', name: 'Smart home', blurb: 'Lights, heating and the doorbell, from the TV.', rows: ['hConn', 'hKeys', 'hHaUrl', 'hHue', 'hShelly', 'hWatch', 'hDim', 'hDoorbell', 'doorbellPause', 'homeStatus', 'hForget'] },
+  { id: 'cleo', name: BRAND, blurb: 'How ' + BRAND + ' talks to you on this TV.', rows: ['tone', 'speak', 'speechRate', 'handoff', 'breakNudge', 'privateTv', 'clearChat'] },
+  { id: 'smarthome', name: 'Smart home', blurb: 'Lights, heating and the doorbell, from the TV.', rows: ['hConn', 'hKeys', 'hHaUrl', 'hHue', 'hShelly', 'hWatch', 'hWatchLights', 'hDim', 'hPause', 'hDoorbell', 'doorbellPause', 'homeStatus', 'hForget'] },
   { id: 'vis', name: 'Viewing info', blurb: 'What ' + BRAND + ' learns from what you watch, and what you can do about it.', rows: ['visOn', 'visKnows', 'visSync', 'smartFavs'] },
   { id: 'phone', name: 'Phone link', blurb: 'Calls and messages from your phone, on the TV.', rows: ['phoneLink', 'phonePreview', 'callPause', 'filmDnd', 'btCheck'] },
   { id: 'weather', name: 'Weather', blurb: 'For the clock, ambient mode and picks.', rows: ['location', 'units'] },
   { id: 'display', name: 'Display & motion', blurb: 'Easier on the eyes, and on the stick.', rows: ['reduceMotion', 'largeText', 'perf', 'sounds'] },
-  { id: 'privacy', name: 'Privacy', blurb: 'What leaves this TV, and where it goes.', rows: ['pChats', 'pApps', 'pNote', 'pTown', 'pSearch', 'pCards', 'pShare', 'pVis', 'pPhone', 'pSmart', 'pUpdate', 'pRem', 'pWeather2', 'pLocal', 'pWatch', 'pYt', 'pHome', 'pVoice', 'pCid', 'pAgreed', 'pTerms'] },
+  { id: 'privacy', name: 'Privacy', blurb: 'What leaves this TV, and where it goes.', rows: ['pChats', 'pApps', 'pNote', 'pTown', 'pSearch', 'pCards', 'pShare', 'pVis', 'pPhone', 'pSmart', 'pUpdate', 'pRem', 'pWeather2', 'pLocal', 'pWatch', 'pYt', 'pHo', 'pHome', 'pVoice', 'pCid', 'pAgreed', 'pTerms'] },
   { id: 'about', name: 'About', blurb: 'Version, help and the advanced bits.', rows: ['version', 'update', 'device', 'media', 'firetv', 'worker', 'reset'] }
 ];
 function rowValueHtml(id) {
@@ -3583,7 +3675,7 @@ function rowAction(el) {
     inp.value = r.value ? r.value() : id === 'location' ? (settings.location ? settings.location.name : tzTown()) : (settings[r.key] || '');
     el.classList.add('editing'); inp.focus(); return;
   }
-  if (r.type === 'bool') settings[r.key] = !settings[r.key];
+  if (r.type === 'bool') { settings[r.key] = !settings[r.key]; if (r.key === 'handoff' && !settings.handoff) Handoff.forget(); }
   else if (r.type === 'cycle') { var i = r.values.indexOf(settings[r.key]); settings[r.key] = r.values[(i + 1) % r.values.length]; }
   else if (r.run) { r.run(el); }
   saveSettings(); applySettings();
@@ -3954,6 +4046,7 @@ var Cid = (function () {
         else if (m.type === 'url' && m.url) offerLink(m);
         else if (m.type === 'photo' && m.id) Shared.receive(m);
         else if (m.type === 'config' && m.env) receiveConfig(m);
+        else if (m.type === 'show' && m.env) Show.receive(m);
         else if (m.type === 'notify') PhoneLink.receive(m);
       });
       if (queue.length && scope !== 'chat' && (scope === 'home' || Amb.isOn()) && !isKids() && settings.consentAt) { if (Amb.isOn()) exitAmbient(); openChat(); }
@@ -3992,7 +4085,175 @@ var Cid = (function () {
       { label: 'Unlink this TV', danger: true, fn: function () { call('signout', {}).catch(function () {}).then(function () { forget(false); toast('This TV is no longer linked'); var el = document.querySelector('.row[data-row="cleoid"]'); if (el) setFocus(refreshRowEl(el)); }); } }
     ]);
   }
-  return { open: open, close: close, start: start, acct: acct, headers: headers, startRelay: startRelay, stopRelay: stopRelay, renderSide: renderSide, menu: menu };
+  return { open: open, close: close, start: start, acct: acct, headers: headers, call: call, startRelay: startRelay, stopRelay: stopRelay, renderSide: renderSide, menu: menu };
+})();
+
+/* ======================= Hand-off: carry a chat on between your devices =======================
+   The TV seals its conversation for each of your other devices' keys (browsers signed in to your Cleo ID), and
+   opens chats your phone or computer sealed for it. Cleo's server only holds the sealed copy, for 3 days at most.
+   Only on the profile linked to your Cleo ID; never on kids profiles or Guest. Off in Settings, Cleo. */
+var Handoff = (function () {
+  var sig = '', changedAt = 0, sentSig = '', busy = false, acctCache = null, acctAt = 0, offer = null;
+  function on() { return settings.handoff !== false && pid === 'main' && !!Cid.acct() && !!(Native && Native.sealFor && Native.openEnvelope); }
+  function sid() { var s = Store.get('hoSid', ''); if (!s) { s = 'tv-' + Math.random().toString(36).slice(2, 10); Store.set('hoSid', s); } return s; }
+  function talk() { return chatLog.filter(function (m) { return (m.role === 'user' || m.role === 'cleo') && m.text; }); }
+  function chatSig() { var l = talk(); return l.length >= 2 ? l.length + ':' + String(l[l.length - 1].text).length : ''; }
+  function devices() {
+    if (acctCache && Date.now() - acctAt < 10 * 60000) return Promise.resolve(acctCache);
+    return Cid.call('me', {}).then(function (r) { acctCache = r.account; acctAt = Date.now(); return acctCache; });
+  }
+  function push() {
+    if (busy || !on()) return;
+    busy = true; var s = chatSig();
+    devices().then(function (a) {
+      var others = (a.devices || []).filter(function (d) { return d.key && !d.current; });
+      if (!others.length) return;
+      // A chat carried on from another device goes back as that same conversation (only the part after it arrived).
+      var carriedAt = -1; for (var i = chatLog.length - 1; i >= 0; i--) if (chatLog[i].role === 'note' && chatLog[i].ho) { carriedAt = i; break; }
+      var note = carriedAt >= 0 ? chatLog[carriedAt] : null;
+      var l = (note ? chatLog.slice(carriedAt + 1).filter(function (m) { return (m.role === 'user' || m.role === 'cleo') && m.text; }) : talk()).slice(-40), first = l.filter(function (m) { return m.role === 'user'; })[0];
+      var text = JSON.stringify({ v: 1, sid: note ? note.ho : sid(), title: note ? note.title : 'On your TV' + (first ? ': ' + String(first.text).slice(0, 48) : ''), at: Date.now(),
+        msgs: l.map(function (m) { return { r: m.role === 'user' ? 'u' : 'a', t: String(m.text).slice(0, 6000) }; }) });
+      var env = {};
+      others.forEach(function (d) { var e = parseJsonLoose(Native.sealFor(d.key, text)); if (e) env[d.id] = e; });
+      if (Object.keys(env).length) return Cid.call('handoff/put', { sid: JSON.parse(text).sid, env: env });
+    }).catch(function () {}).then(function () { sentSig = s; busy = false; });
+  }
+  // Sends a few seconds after the conversation settles, never mid-reply.
+  setInterval(function () {
+    if (!on()) return;
+    var s = chatSig(); if (!s) return;
+    if (s !== sig) { sig = s; changedAt = Date.now(); return; }
+    if (s !== sentSig && !thinking && Date.now() - changedAt > 6000) push();
+  }, 3000);
+  function check() {
+    if (!on()) return Promise.resolve(null);
+    return Cid.call('handoff/get', {}).then(function (r) {
+      if (!r || !r.env || !r.at || r.at <= Store.get('hoSeen', 0) || Date.now() - r.at > 6 * 3600000) return null;
+      var p = parseJsonLoose(Native.openEnvelope(JSON.stringify(r.env)));
+      if (!p || !Array.isArray(p.msgs) || !p.msgs.length) return null;
+      offer = { at: r.at, from: r.kind === 'tv' ? 'another TV' : r.label || 'your phone', p: p };
+      if (scope === 'chat') renderChips(lastChips);
+      return offer;
+    }).catch(function () { return null; });
+  }
+  function chip() { return offer ? 'Carry on from ' + offer.from : ''; }
+  function carry() {
+    if (!offer) return;
+    var o = offer, p = o.p; offer = null; Store.set('hoSeen', o.at);
+    var msgs = p.msgs.slice(-40).map(function (m) { return { role: m.r === 'u' ? 'user' : 'cleo', text: String(m.t || ''), t: Date.now() }; });
+    var again = -1; for (var i = chatLog.length - 1; i >= 0; i--) if (chatLog[i].role === 'note' && chatLog[i].ho && chatLog[i].ho === p.sid) { again = i; break; }
+    if (p.sid === sid()) chatLog = msgs; // this TV's own chat, carried further on another device
+    else if (again >= 0) chatLog = chatLog.slice(0, again + 1).concat(msgs); // a chat carried here before, now further along
+    else chatLog = chatLog.concat([{ role: 'note', text: 'Carried on from ' + o.from + (p.title ? ' · ' + p.title : ''), t: Date.now(), ho: String(p.sid || '').slice(0, 60), title: String(p.title || '').slice(0, 80) }], msgs);
+    PS.set('chat', chatLog.slice(-60)); sig = sentSig = chatSig();
+    renderChat(); renderChips([]); Sound.reply(); setFocus($('composer'));
+  }
+  function dismiss() { if (offer) Store.set('hoSeen', offer.at); offer = null; }
+  function forget() { Cid.call('handoff/clear', {}).catch(function () {}); offer = null; }
+  setInterval(function () { if (on() && (scope === 'home' || scope === 'chat') && appFront) check(); }, 60000);
+  return { check: check, chip: chip, carry: carry, dismiss: dismiss, forget: forget, on: on };
+})();
+
+/* ======================= Show on TV: cards and replies sent from cleo.ac =======================
+   Arrives sealed for this TV (only it can open it). A YouTube video plays in Watch; pictures become a slideshow;
+   anything with words (a recipe, an answer) gets a big, readable page. */
+var appFront = true;
+var Show = (function () {
+  var cur = null, at = 0, prev = null, prevScope = 'home', pending = null, timer = 0, recentAt = 0;
+  function showMd(s) {
+    var out = [], list = null;
+    String(s || '').split('\n').forEach(function (line) {
+      var t = line.trim(), m;
+      if (!t) { if (list) { out.push('</' + list + '>'); list = null; } return; }
+      if ((m = /^#{1,4}\s+(.+)$/.exec(t))) { if (list) { out.push('</' + list + '>'); list = null; } out.push('<h3>' + inl(m[1]) + '</h3>'); return; }
+      if ((m = /^(?:[-*•]|\d+[.)])\s+(.+)$/.exec(t))) {
+        var kind = /^\d/.test(t) ? 'ol' : 'ul';
+        if (list !== kind) { if (list) out.push('</' + list + '>'); out.push('<' + kind + '>'); list = kind; }
+        out.push('<li>' + inl(m[1]) + '</li>'); return;
+      }
+      if (list) { out.push('</' + list + '>'); list = null; }
+      out.push('<p>' + inl(t) + '</p>');
+    });
+    if (list) out.push('</' + list + '>');
+    return out.join('');
+  }
+  function inl(t) { return esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<i>$2</i>').replace(/`([^`]+)`/g, '$1').replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g, '$1'); }
+  function receive(m) {
+    var p = parseJsonLoose(Native && Native.openEnvelope ? Native.openEnvelope(JSON.stringify(m.env)) : '');
+    if (!p) { toast('Something from ' + (m.from || 'your phone') + ' couldn’t be opened on this TV'); return; }
+    p.from = p.from || m.from || 'your phone';
+    p.images = (p.images || []).filter(function (u) { return /^https:\/\//.test(u) || /^data:image\/(jpeg|png|webp);base64,/.test(u); }).slice(0, 12);
+    Sound.reply();
+    // Just a video (a trailer, a link): it plays. A card with words or pictures shows first, with a Play button.
+    if (p.yt && /^[A-Za-z0-9_-]{11}$/.test(p.yt) && !isKids() && !p.images.length && String(p.text || '').trim().length < 160) {
+      if (Amb.isOn()) exitAmbient();
+      if (scope === 'menu') closeMenu();
+      if (scope === 'home' || scope === 'yt' || scope === 'show') { if (scope === 'show') close(); Yt.open({ id: p.yt, title: p.title }, null, 0, true); }
+      else { pending = p; toast('A video from ' + p.from + ' · it plays when you’re back on Home'); }
+      return;
+    }
+    if (Amb.isOn()) exitAmbient();
+    if (scope === 'home' || scope === 'show') open(p);
+    else { pending = p; toast('Something from ' + p.from + ' · it shows when you’re back on Home'); }
+  }
+  // Something that arrived while you were busy shows as soon as you're back on Home.
+  setInterval(function () { if (pending && scope === 'home' && !moveMode) { var p = pending; pending = null; if (p.yt && !(p.images || []).length && String(p.text || '').trim().length < 160 && !isKids()) Yt.open({ id: p.yt, title: p.title }, null, 0, true); else open(p); } }, 700);
+  function open(p) {
+    if (scope !== 'show') { prev = focused; prevScope = scope; }
+    cur = p; at = 0; recentAt = Date.now();
+    var pane = $('showPane'), words = String(p.text || '').trim(), imgs = p.images || [];
+    pane.className = 'pane on ' + (imgs.length && words.length < 220 ? 'pics' : imgs.length ? 'both' : 'words');
+    $('showFrom').textContent = 'From ' + p.from;
+    $('showTitle').textContent = p.title || 'From your chat';
+    $('showText').innerHTML = showMd(words);
+    $('showText')._y = 0; $('showText').style.transform = '';
+    var btns = [];
+    if (p.yt && !isKids()) btns.push('<div class="btn primary" data-focus data-kind="shyt">Play the video</div>');
+    btns.push('<div class="btn' + (btns.length ? '' : ' primary') + '" data-focus data-kind="shask">Ask ' + esc(BRAND) + ' about this</div>');
+    if (p.link && Native && Native.openUrl) btns.push('<div class="btn" data-focus data-kind="shlink">Open the page</div>');
+    btns.push('<div class="btn" data-focus data-kind="shclose">Done</div>');
+    $('showBtns').innerHTML = btns.join('');
+    scope = 'show'; pic(); setFocus($('showBtns').children[0]);
+  }
+  function pic() {
+    var imgs = (cur && cur.images) || [], u = imgs[at] || '';
+    $('showPic').style.backgroundImage = u ? 'url("' + u.replace(/"/g, '%22') + '")' : '';
+    $('showBlur').style.backgroundImage = $('showPic').style.backgroundImage;
+    $('showDots').innerHTML = imgs.length > 1 ? imgs.map(function (x, i) { return '<i' + (i === at ? ' class="on"' : '') + '></i>'; }).join('') : '';
+    clearInterval(timer);
+    if (imgs.length > 1 && $('showPane').classList.contains('pics')) timer = setInterval(function () { step(1); }, 7000);
+  }
+  function step(d) { var n = ((cur && cur.images) || []).length; if (n < 2) return false; at = (at + d + n) % n; pic(); return true; }
+  function scroll(d) {
+    var inner = $('showText'), box = $('showWords'); if (!inner || !box) return false;
+    var max = Math.max(0, inner.offsetHeight - box.clientHeight); if (!max) return false;
+    var y = Math.max(0, Math.min(max, (inner._y || 0) + d)); if (y === (inner._y || 0)) return false;
+    inner._y = y; inner.style.transform = 'translateY(' + (-y) + 'px)'; return true;
+  }
+  // ◀ ▶ change picture (unless you're moving between buttons); ▲ ▼ scroll the words.
+  function key(dir) {
+    if (scope !== 'show') return false;
+    var onBtns = focused && focused.closest && focused.closest('#showBtns');
+    if ((dir === 'left' || dir === 'right') && (!onBtns || $('showPane').classList.contains('pics'))) return step(dir === 'left' ? -1 : 1) || !onBtns;
+    if (dir === 'down' || dir === 'up') return scroll((dir === 'down' ? 1 : -1) * 18 * remPx());
+    return false;
+  }
+  function act(el) {
+    var k = el.getAttribute('data-kind'), p = cur;
+    if (k === 'shclose') { close(); return; }
+    if (k === 'shyt') { close(); Yt.open({ id: p.yt, title: p.title }, null, 0, true); return; }
+    if (k === 'shlink') { close(); if (!Native.openUrl(p.link)) toast('That page couldn’t be opened'); return; }
+    if (k === 'shask') { close(); openChat(); sendChat('Tell me more about ' + (p.title && p.title !== 'From your chat' ? '“' + p.title + '”' : 'what I just put on the TV') + '.'); }
+  }
+  function close() {
+    clearInterval(timer); $('showPane').className = 'pane'; scope = prevScope === 'show' || prevScope === 'menu' ? 'home' : prevScope;
+    if (focused) focused.classList.remove('focused');
+    setFocus(prev && document.body.contains(prev) ? prev : defaultFocus());
+  }
+  function recent() { return cur && Date.now() - recentAt < 20 * 60000 ? cur : null; }
+  function waiting() { return !!pending; }
+  return { receive: receive, open: open, close: close, act: act, key: key, recent: recent, waiting: waiting };
 })();
 
 /* ======================= Cleo (chat) ======================= */
@@ -4016,7 +4277,8 @@ function renderChat() {
   wireCatArt($('msgsInner'));
 }
 function renderChips(list) {
-  $('chips').innerHTML = (list || []).slice(0, 3).map(function (c) { return '<div class="chip" data-focus data-kind="chip">' + esc(c) + '</div>'; }).join('');
+  var ho = typeof Handoff !== 'undefined' && Handoff.chip();
+  $('chips').innerHTML = (ho ? '<div class="chip ho" data-focus data-kind="hochip">' + esc(ho) + '</div>' : '') + (list || []).slice(0, ho ? 2 : 3).map(function (c) { return '<div class="chip" data-focus data-kind="chip">' + esc(c) + '</div>'; }).join('');
 }
 function openChat() {
   if (isKids()) { toast('Chatting with ' + BRAND + ' is for grown-ups'); return; }
@@ -4025,7 +4287,7 @@ function openChat() {
   renderChips(npIsVideo() ? ['Who’s in this?', /S\d|episode/i.test(np.title + ' ' + (np.artist || '')) || (np.duration > 0 && np.duration < 75 * 60000) ? 'How many episodes are left?' : 'How long is left?', 'Is it worth finishing?']
     : chatLog.length && lastChips.length ? lastChips : ['What should I watch tonight?', 'Tell me something interesting', 'How are you?']);
   if (npIsVideo()) screenInfo(); // look it up early, so the answer is quick
-  renderSpeakToggle(); Cid.renderSide(); Cid.startRelay(true);
+  renderSpeakToggle(); Cid.renderSide(); Cid.startRelay(true); Handoff.check();
   $('chat').classList.add('on'); scope = 'chat';
   $('chatStatus').textContent = thinking ? 'Thinking it over…' : 'Here with you';
   setFocus($('composer'));
@@ -4202,7 +4464,7 @@ function sendChat(text, notHome) {
   chatLog.push({ role: 'user', text: text, t: Date.now() });
   thinking = true; document.body.classList.add('thinking'); $('chatStatus').textContent = 'Thinking it over…';
   renderChat(); renderChips([]); if (scope === 'chat') setFocus($('composer'));
-  var history = chatLog.filter(function (m) { return m.role !== 'err'; }).slice(-16).map(function (m) { return { role: m.role === 'cleo' ? 'assistant' : 'user', content: m.text }; });
+  var history = chatLog.filter(function (m) { return m.role === 'user' || m.role === 'cleo'; }).slice(-16).map(function (m) { return { role: m.role === 'cleo' ? 'assistant' : 'user', content: m.text }; });
   var localTag = localCardTag(text);
   screenContextFor(text).then(function (ctx) { return askWorker([{ role: 'system', content: tvSystemPrompt() + ctx }].concat(history)); }).then(function (reply) {
     var tc = takeCard(reply), msg = { role: 'cleo', text: tc.text || reply, t: Date.now() };
@@ -4655,6 +4917,7 @@ function back() {
   if (scope === 'journal') return closeJournal();
   if (scope === 'title') return closeTitle();
   if (scope === 'yt') { Yt.key('back'); return; }
+  if (scope === 'show') { Show.close(); return; }
   if (scope === 'photo') return Shared.close();
   if (scope === 'cc') return CC.close();
   if (scope === 'house') return House.close();
@@ -4691,6 +4954,7 @@ document.addEventListener('keydown', function (e) {
   if (dir) {
     e.preventDefault();
     if (scope === 'yt' && Yt.key(dir)) return;
+    if (scope === 'show' && Show.key(dir)) return;
     if (moveMode) { if (dir === 'left') moveBy(-1); if (dir === 'right') moveBy(1); return; }
     if (scope === 'pin' && (dir === 'up' || dir === 'down')) { pinStep(dir === 'up' ? 1 : -1); return; }
     if (scope === 'photo') { if (dir === 'left' || dir === 'right') Shared.step(dir === 'left' ? -1 : 1); return; }
@@ -4756,6 +5020,7 @@ window.iole = {
   back: back,
   menu: function () { if (Amb.isOn()) { exitAmbient(); return; } resetIdle(); options(focused); },
   resume: function () {
+    appFront = true;
     var away = Date.now() - lastInput;
     unlocked = false; Amb.exit(); resetIdle(); tick(); renderSleepPill(); readNp(); loadApps(); refreshHomeRow();
     var keep = focused && focused.getAttribute('data-pkg'); if (!scopeRoot()) renderAll(keep);
@@ -4764,14 +5029,14 @@ window.iole = {
   home: function () {
     Amb.exit(); if (moveMode) endMove();
     if (scope === 'setup' || scope === 'link') return;
-    if (scope === 'menu') closeMenu(); if (scope === 'yt') Yt.close();
+    if (scope === 'menu') closeMenu(); if (scope === 'yt') Yt.close(); if (scope === 'show') Show.close();
     if (scope === 'pin') closePin(false); if (scope === 'journal') closeJournal(); if (scope === 'title') closeTitle(); if (scope === 'photo') Shared.close(); if (scope === 'cc') CC.close(); if (scope === 'house') House.close(); if (scope === 'knows') Knows.close(); if (scope === 'who') { closeWho(); return; }
     if (scope === 'settings') closeSettings(); else if (scope === 'chat') closeChat();
     showView('home'); setFocus(defaultFocus());
   },
   media: function () { readNp(); if (scope === 'cc') CC.refresh(); },
   mediaKey: function (k) { resetIdle(); Yt.mediaKey(k); },
-  paused: function () { Yt.pause(); },
+  paused: function () { appFront = false; Yt.pause(); },
   doorbell: function (name) {
     Sound.reply();
     if (np && np.playing && Native && Native.media && settings.doorbellPause) Native.media('pause');
@@ -4783,7 +5048,7 @@ window.iole = {
   sleepDone: function () {
     if (isKids() && (Home.cfg().bedLights || []).length) Home.load().then(function () { (Home.cfg().bedLights || []).map(Home.byId).filter(Boolean).forEach(function (d) { Home.act(d, 'off').catch(function () {}); }); });
     sleepUntil = 0; clearTimeout(sleepTimer); renderSleepPill(); stopSpeaking();
-    if (scope === 'menu') closeMenu(); if (scope === 'yt') Yt.close();
+    if (scope === 'menu') closeMenu(); if (scope === 'yt') Yt.close(); if (scope === 'show') Show.close();
     if (scope === 'pin') closePin(false); if (scope === 'menu') closeMenu(); if (scope === 'settings') closeSettings(); else if (scope === 'chat') closeChat();
     if (scope !== 'setup') { showView('home'); setTimeout(function () { enterAmbient({ sleep: true }); }, 400); }
   }

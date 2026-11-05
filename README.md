@@ -157,6 +157,26 @@ Search and rows go through the Worker's `/yt/` routes (`cleo-youtube.js`), which
 a search costs 101 and is capped at 40 per device and 80 overall a day; rows cost 1–3 units and are cached for hours.
 Playing a video needs no key, so links from your phone play even before the key is set up.
 
+## Hand-off and Show on TV
+
+**Hand-off** carries a conversation between your devices. On cleo.ac, a few seconds after a chat settles, the
+browser seals it (the last 40 messages) for every other device on your Cleo ID that has shared a key, and the Worker
+keeps one sealed copy per account for up to 3 days (`/id/handoff/put|get|clear`). Another browser shows a
+"Carry on from …" banner; the TV shows a *Carry on from …* chip in chat. The TV does the same in reverse with its own
+chat (Settings → Cleo → Hand-off, on by default, linked profile only, never kids or Guest). A chat carried to the TV
+goes back as the same conversation, not a new one. Envelopes are the same P-256 + HKDF + AES-GCM scheme as everything
+else, so Cleo's server only ever holds ciphertext.
+
+**Show on TV**: every card in a cleo.ac chat, and every live reply, gets a TV button once a TV is linked. The card's
+title, words, pictures (web pictures as links, pictures made in the chat shrunk and sealed in) and any YouTube link are
+sealed for each TV and relayed (`/id/relay/show`). On the TV:
+- a bare video (a trailer) plays straight away in Cleo's YouTube player;
+- pictures with a short caption become a full-screen slideshow (◀ ▶, or every 7 seconds);
+- anything with words (a recipe, an answer) gets a big reading page: ▲ ▼ scroll, buttons for *Play the video*,
+  *Ask Cleo about this* and *Open the page*.
+If you're in chat or another pane it waits and appears when you're back on Home. "What's on screen?" questions
+afterwards know what was shown.
+
 ## Cleo Home (smart home)
 
 Settings → **Smart home**, then everything appears in Control Center (☰) and in **Your devices**.
@@ -170,7 +190,12 @@ Settings → **Smart home**, then everything appears in Control Center (☰) and
 Keys typed on cleo.ac are encrypted in the browser for this TV (the TV publishes its own public key when it's linked to Cleo ID), so Cleo's server can't read them. They're stored only on the TV.
 
 - **Chat**: *turn off the lamp*, *dim the bedroom lights to 30%*, *set the heating to 21*, *turn on movie night*, *turn everything off*. These are handled on the TV and never sent to Cleo. Locks and alarms always ask on screen first.
-- **Lights that follow what you watch**: in Your devices, ☰ on a light → *Dim for films*, then turn on *Lights follow what you watch*. They dim when a film or episode plays, come up a bit when you pause, and go back afterwards.
+- **Lights that follow what you watch** (Settings → Smart home): turn it on and tick the lights in *Lights to dim* (or ☰ on a light → *Dim for films*).
+  - **Starts** after about 15 seconds of a film or episode playing, so trailers and the previews Netflix autoplays while you browse don't count.
+  - **While watching:** dim to 10–40%, or *Lights off*. Lamps on smart plugs switch off (they can't dim).
+  - **When you pause** (for more than a few seconds, so skipping doesn't flash them): brighter (50%), back to normal, or stay as they are.
+  - **Ends** 2 minutes after nothing is playing (so autoplaying the next episode doesn't bring the lights up), when the credits roll (the last minute of a film), or after 15 minutes paused. Every light goes back exactly as it was; lights that were off stay off.
+  - Works with anything that shows in Now playing (needs the Now playing adb step) and with Cleo's own YouTube player. Music doesn't count. Off on kids profiles.
 - **Doorbell** (Home Assistant): choose the doorbell entity and a camera. When it rings, a card with a snapshot appears over whatever is playing (watched natively every 2 s on your network). Optionally it also pauses playback.
 - **Kids' bedtime**: ☰ on a light → *Turn off at kids' bedtime*.
 - **Ambient**: optional status line (unlocked doors, heating, lights left on).
